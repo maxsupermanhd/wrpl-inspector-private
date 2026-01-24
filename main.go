@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"main/parsers/stub0"
 	"main/parsers/stub1"
+	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
 	"main/tabs/resultsui"
 	"main/tabs/valuesearch"
@@ -13,7 +14,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/inspector"
 	basictabs "github.com/maxsupermanhd/wrpl-inspector/inspector/basicTabs"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/ecsui"
 	"github.com/maxsupermanhd/wrpl-inspector/inspector/packetui"
 	"github.com/maxsupermanhd/wrpl-inspector/inspector/playersui"
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl"
@@ -59,7 +59,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, genBlkJSONTab("Results raw", rpl.Results))
 	tabs = append(tabs, noerr(resultsui.NewResultsTab(rpl.Results)))
 	tabs = append(tabs, packetui.NewPacketsTab(rpl, streams...))
-	tabs = append(tabs, ecsui.NewECSUI(rpl, ecs))
+	tabs = append(tabs, ecsui2.NewECSUI(rpl, ecs))
 	tabs = append(tabs, interpreter2.NewByteInterpreterTab(rpl, streams...))
 	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
