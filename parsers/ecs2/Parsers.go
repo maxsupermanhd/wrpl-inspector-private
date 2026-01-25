@@ -62,7 +62,7 @@ func StorageParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 	return &n, nil // TODO, implement IdFieldSerializer255
 }
 
-func read_string(r *danet.BitReader, ctx *PacketECSParser) (ret *string, err error) {
+func read_string(r *danet.BitReader, ctx *PacketECSParser) (ret string, err error) {
 	var n []byte
 	var temp byte
 	temp, err = r.ReadByte()
@@ -71,11 +71,9 @@ func read_string(r *danet.BitReader, ctx *PacketECSParser) (ret *string, err err
 		temp, err = r.ReadByte()
 	}
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	var str string
-	str = string(n)
-	return &str, nil
+	return string(n), nil
 }
 
 func StringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -200,29 +198,29 @@ func ArrayParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) 
 
 const OBJECT_KEY_BITS = 10
 
-func read_istring(r *danet.BitReader, ctx *PacketECSParser) (ret *string, err error) {
+func read_istring(r *danet.BitReader, ctx *PacketECSParser) (ret string, err error) {
 	rawString, err := ReadBool(r, ctx)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if rawString {
 		return read_string(r, ctx)
 	}
 	str_index_bytes, err := r.ReadBits(OBJECT_KEY_BITS)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	strIndex := binary.LittleEndian.Uint16(str_index_bytes)
 	str, exists := ctx.Interned[strIndex]
 	if !exists {
 		str, err := read_string(r, ctx)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		ctx.Interned[strIndex] = *str
+		ctx.Interned[strIndex] = str
 		return str, nil
 	}
-	return &str, nil
+	return str, nil
 }
 
 func IStringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -249,7 +247,7 @@ func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 		if err != nil {
 			return nil, err
 		}
-		n.Components[*name] = *comp
+		n.Components[name] = *comp
 	}
 	return &n, nil
 }
