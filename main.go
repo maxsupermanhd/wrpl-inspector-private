@@ -46,7 +46,9 @@ func main() {
 }
 
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
-	ecs := ecs2.NewPacketECSParser(nil)
+	ecs := ecs2.NewPacketECSParser()
+	ecs.Mgr.Uid_lookup = make(map[int32]*ecs2.Entity) // TODO dunno how to do this properly
+	ecs.Mgr.Entities = make(map[uint32]*ecs2.Entity)
 	slot := &packetslot.PacketSlotParser{KeepMessages: true}
 	parsers := []packet.PacketParser{
 		&packetchat.PacketChatParser{},

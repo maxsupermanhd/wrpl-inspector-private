@@ -69,23 +69,24 @@ type Template struct {
 }
 
 type HashedComponent struct {
-	Name uint32
-	Type uint32
+	Name Datacomp_hash_t
+	Type component_hash_t
 }
 
 type PacketECSParser struct {
-	TemplateDefs     map[TemplateIdx]*Template
-	ComponentDefs    map[ComponentIdx]*HashedComponent
-	ComponentParsers map[uint32]ComponentParser
-	Messages         []ParsedPacketECS
+	TemplateDefs  map[TemplateIdx]*Template
+	ComponentDefs map[ComponentIdx]*HashedComponent
+	Messages      []ParsedPacketECS
+	Interned      map[uint16]string
+	Mgr           EntityManager
 }
 
-func NewPacketECSParser(parsers map[uint32]ComponentParser) *PacketECSParser {
+func NewPacketECSParser() *PacketECSParser { // I removed parsers because that data will not change across iterations, so no need to reload it
 	return &PacketECSParser{
-		TemplateDefs:     map[TemplateIdx]*Template{},
-		ComponentDefs:    map[ComponentIdx]*HashedComponent{},
-		ComponentParsers: parsers,
-		Messages:         []ParsedPacketECS{},
+		TemplateDefs:  map[TemplateIdx]*Template{},
+		ComponentDefs: map[ComponentIdx]*HashedComponent{},
+		Messages:      []ParsedPacketECS{},
+		Mgr:           EntityManager{},
 	}
 }
 
@@ -122,6 +123,7 @@ func (p *PacketECSParser) Name() string {
 }
 
 func (p *PacketECSParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
+
 	return map[byte][][]packet.ParsingCondition{
 		6: nil,
 	}
@@ -174,6 +176,75 @@ func (p *PacketECSParser) ParseECSTemplate(r *danet.BitReader) (*Template, error
 	return templDef, nil
 }
 
+func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Template) (ret *Entity, err error) {
+
+	templateComponentsCount := uint16(len(templ.Components))
+	var compCount uint64
+	if templateComponentsCount < 256 {
+		temp, err := r.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		compCount = uint64(temp)
+	} else {
+		compCount, err = r.ReadCompressed()
+		if err != nil {
+			return nil, err
+		}
+	}
+	var comp uint16
+	comp = 0
+	var Payload Entity
+	Payload.template = templ.Name
+	Payload.data.components = make(map[string]Component)
+	for i := uint16(0); i < uint16(compCount); i++ {
+		var ofs uint64 // actualy uint16
+		if templateComponentsCount < 256 {
+			temp, err := r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			ofs = uint64(temp)
+		} else {
+			ofs, err = r.ReadCompressed()
+			if err != nil {
+				return nil, err
+			}
+		}
+		if i == 0 {
+			comp = uint16(ofs)
+		} else {
+			comp = comp + uint16(ofs) + 1
+		}
+		if comp >= templateComponentsCount {
+			err = fmt.Errorf("Invalid template component index %d for template local idx %d<%s> (count %d)", comp, templ.ID, templ.Name, templateComponentsCount)
+			return nil, err
+		}
+		idx := templ.Components[comp] // im just going to assume its always good :|
+
+		c, good := p.ComponentDefs[idx]
+		dataname, _ := g_ecs_data.getDataCompName(c.Name)
+		types, _ := g_ecs_data.getCompName(c.Type)
+		fmt.Printf("Parsing %s<%s> of index %d\n", dataname, types, comp)
+		if !good {
+			err = fmt.Errorf("Invalid index into ComponentDefs of %d", idx)
+			return nil, err
+		}
+		component, err := deserialize_init_component_typeless(r, p, c.Type, c.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		name, good := g_ecs_data.getDataCompName(c.Name)
+		if !good {
+			err = fmt.Errorf("Unkown Datatype of name %d", c.Name)
+			return nil, err
+		}
+		Payload.data.components[name] = *component
+	}
+	return &Payload, nil
+}
+
 func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Message, err error) {
 	ret = &Message{}
 	ret.EID, err = packet.ReadEID(r)
@@ -195,6 +266,15 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 		return ret, fmt.Errorf("reading template: %w", err)
 	}
 	ret.Template = templ.ID
+	fmt.Printf("Parsing template %s of eid 0x%x\n", templ.Name, ret.EID)
+	entitiy, err := p.deserializeConstruction(br, templ)
+	if err != nil {
+		fmt.Printf("Error deserializing construction: %v\n", err)
+		return ret, fmt.Errorf("parsing entity: %w", err)
+	}
+	var eid EntityId
+	eid.handle = (entity_id_t(ret.Template))
+	p.Mgr.AddEntity(eid, entitiy)
 	ret.Data, err = io.ReadAll(br)
 	return
 }
@@ -225,7 +305,6 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 		r = danet.NewBitReader(decomp[:dat.DecompressSize])
 		dat.Control = 0x24
 	}
-
 	if dat.Control == 0x24 {
 		dat.MessageCount, err = r.ReadByte()
 		if err != nil {
@@ -241,4 +320,37 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 	}
 	p.Messages = append(p.Messages, *dat)
 	return dat, nil
+}
+
+func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParser, comp_type component_hash_t, datacomp_type Datacomp_hash_t) (ret *Component, err error) {
+	if comp_type == 0 {
+		return nil, nil
+	}
+	var serializer ComponentParser
+	if datacomp_type != 0 { // if we have a datacomp, use that, else use the component serializer
+		serializer, _ = g_ecs_data.DataComponentParsers[datacomp_type]
+	} else {
+		serializer, _ = g_ecs_data.ComponentParsers[comp_type]
+	}
+	if serializer == nil {
+		return nil, fmt.Errorf("Serializer not found for datacomponent %s<%d>", g_ecs_data.comps.DataComponents[uint32(datacomp_type)].Name, comp_type)
+	}
+	raw, err := serializer.Parse(r, mgr)
+	if err != nil {
+		return nil, err
+	}
+	var comp Component
+	comp.value = raw
+	comp.c_type = comp_type
+	return &comp, nil
+}
+
+func deserialize_child_component(r *danet.BitReader, mgr *PacketECSParser) (ret *Component, err error) {
+	var type_id component_hash_t
+	err = binary.Read(r, binary.LittleEndian, &type_id)
+	if err != nil {
+		return nil, err
+	}
+	ret, err = deserialize_init_component_typeless(r, mgr, type_id, 0)
+	return ret, err
 }

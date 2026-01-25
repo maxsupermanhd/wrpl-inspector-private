@@ -78,11 +78,11 @@ func (tab *ECSUI) RunTabComponents() {
 			imgui.TableNextColumn()
 			imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Name))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(tab.hashName[v.Name])
+			imgui.TextUnformatted(tab.hashName[uint32(v.Name)])
 			imgui.TableNextColumn()
 			imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Type))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(tab.hashType[v.Type])
+			imgui.TextUnformatted(tab.hashType[uint32(v.Type)])
 		}
 		imgui.EndTable()
 	}
@@ -119,11 +119,11 @@ func (tab *ECSUI) RunTabTemplates() {
 					imgui.TableSetColumnIndex(2)
 					imgui.TextUnformatted(fmt.Sprintf("0x%08X", compDef.Type))
 					imgui.TableSetColumnIndex(3)
-					imgui.TextUnformatted(fmt.Sprintf("%v", tab.hashType[compDef.Type]))
+					imgui.TextUnformatted(fmt.Sprintf("%v", tab.hashType[uint32(compDef.Type)]))
 					imgui.TableSetColumnIndex(4)
 					imgui.TextUnformatted(fmt.Sprintf("0x%08X", compDef.Name))
 					imgui.TableSetColumnIndex(5)
-					imgui.TextUnformatted(fmt.Sprintf("%v", tab.hashName[compDef.Name]))
+					imgui.TextUnformatted(fmt.Sprintf("%v", tab.hashName[uint32(compDef.Name)]))
 				}
 			}
 			imgui.EndTable()
