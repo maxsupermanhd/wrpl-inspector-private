@@ -222,7 +222,6 @@ func IStringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 
 func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n Object
-	n.Components = make(map[string]Component)
 	count, err := r.ReadCompressed()
 	if err != nil {
 		return nil, err
@@ -236,7 +235,7 @@ func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 		if err != nil {
 			return nil, err
 		}
-		n.Components[name] = *comp
+		n.AddComponent(comp, name)
 	}
 	return n, nil
 }

@@ -14,9 +14,71 @@ type Component struct {
 	Value any           // actual data, I think this will ensure the Component owns?
 	Type  ComponentHash // what type
 }
-
+type NamedComponent struct {
+	Comp *Component
+	Name string
+}
 type Object struct {
-	Components map[string]Component // maps a name to a specific component
+	Components []NamedComponent
+}
+
+func (o *Object) lookupComponent(name string) *Component {
+	for _, component := range o.Components {
+		if component.Name == name {
+			return component.Comp
+		}
+	}
+	return nil
+}
+
+func (o *Object) AddComponent(comp *Component, name string) {
+	var named NamedComponent
+	named.Name = name
+	named.Comp = comp
+	o.Components = append(o.Components, named)
+	return
+}
+
+func (o *Object) GetData(name string) (any, bool) {
+	comp := o.lookupComponent(name)
+	if comp == nil {
+		return nil, false
+	}
+	return comp.Value, true
+}
+
+func (o *Object) GetDataPtr(name string) (any, bool) {
+	comp := o.lookupComponent(name)
+	if comp == nil {
+		return nil, false
+	}
+	return &comp.Value, true
+}
+
+func GetObjectData[T any](o *Object, name string) (T, bool) {
+	val, ok := o.GetData(name)
+	if !ok {
+		var temp T
+		return temp, false
+	}
+	ret, succ := val.(T)
+	if !succ {
+		var temp T
+		return temp, false
+	}
+	return ret, true
+}
+
+func GetObjectDataPtr[T any](o *Object, name string) (*T, bool) {
+	val, ok := o.GetDataPtr(name)
+	if !ok {
+		return nil, false
+	}
+	ret, succ := val.(*T)
+	if !succ {
+		return nil, false
+	}
+	return ret, true
 }
 
 type Entity struct {

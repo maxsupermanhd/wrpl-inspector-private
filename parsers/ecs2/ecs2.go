@@ -195,7 +195,6 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 	comp = 0
 	var Payload Entity
 	Payload.Template = templ.Name
-	Payload.Data.Components = make(map[string]Component)
 	for i := uint16(0); i < uint16(compCount); i++ {
 		var ofs uint64 // actualy uint16
 		if templateComponentsCount < 256 {
@@ -234,7 +233,7 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 		if !good {
 			return nil, fmt.Errorf("unkown Datatype of name %d", c.Name)
 		}
-		Payload.Data.Components[name] = *component
+		Payload.Data.AddComponent(component, name)
 	}
 	return &Payload, nil
 }
@@ -264,7 +263,7 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 	if err != nil {
 		return ret, fmt.Errorf("parsing entity: %w", err)
 	}
-	eid := EntityID(ret.Template)
+	eid := EntityID(ret.EID)
 	p.Mgr.AddEntity(eid, entitiy)
 	ret.Parsed = append(ret.Parsed, entitiy)
 	return

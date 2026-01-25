@@ -7,9 +7,9 @@ type EntityManager struct {
 
 func (mgr *EntityManager) AddEntity(eid EntityID, entity *Entity) {
 	mgr.Entities[eid.Index()] = entity
-	val, ok := entity.Data.Components["uid"]
+	val, ok := GetObjectData[int32](&entity.Data, "uid")
 	if ok {
-		mgr.Uid_lookup[val.Value.(int32)] = entity
+		mgr.Uid_lookup[val] = entity
 	}
 }
 
