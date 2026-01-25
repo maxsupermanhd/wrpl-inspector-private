@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"main/parsers/ecs2"
+	"main/parsers/kills2"
 	"main/parsers/stub0"
 	"main/parsers/stub1"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
+	"main/tabs/killsui"
 	"main/tabs/resultsui"
 	"main/tabs/valuesearch"
 	"os"
@@ -23,7 +25,6 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/award"
 	packetchat "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/chat"
-	packetkill "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/kill"
 	packetmovement "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/movement"
 	packetslot "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/slot"
 )
@@ -50,10 +51,11 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	ecs.Mgr.Uid_lookup = make(map[int32]*ecs2.Entity) // TODO dunno how to do this properly
 	ecs.Mgr.Entities = make(map[uint32]*ecs2.Entity)
 	slot := &packetslot.PacketSlotParser{KeepMessages: true}
+	kills := &kills2.PacketKillParser{KeepKills: true}
 	parsers := []packet.PacketParser{
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
-		&packetkill.PacketKillParser{},
+		kills,
 		&packetmovement.PacketMovementParser{},
 		&stub0.PacketStubParser{},
 		&stub1.PacketStubParser{},
@@ -78,6 +80,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, bitshiftui.NewBitShiftUI())
 	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
+	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot))
 	return parsers, tabs
 }
 
