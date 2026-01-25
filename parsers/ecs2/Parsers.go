@@ -87,13 +87,11 @@ func StringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 }
 
 func ReadBool(r *danet.BitReader, ctx *PacketECSParser) (ret bool, err error) { // TODO, move this inside bitReader, not having a read bool is CRIMINAL I say
-	var n bool
 	out, err := r.ReadBits(1)
 	if err != nil {
 		return false, err
 	}
-	n = out[0] == 1
-	return n, nil
+	return out[0] == 1, nil
 }
 
 func BoolParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {

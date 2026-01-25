@@ -21,7 +21,6 @@ package ecs2
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
@@ -217,28 +216,23 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 			comp = comp + uint16(ofs) + 1
 		}
 		if comp >= templateComponentsCount {
-			err = fmt.Errorf("Invalid template component index %d for template local idx %d<%s> (count %d)", comp, templ.ID, templ.Name, templateComponentsCount)
+			err = fmt.Errorf("invalid template component index %d for template local idx %d<%s> (count %d)", comp, templ.ID, templ.Name, templateComponentsCount)
 			return nil, err
 		}
 		idx := templ.Components[comp] // im just going to assume its always good :|
-
 		c, good := p.ComponentDefs[idx]
-		dataname, _ := g_ecs_data.GetDataCompName(c.Name)
-		types, _ := g_ecs_data.GetCompName(c.Type)
-		fmt.Printf("Parsing %s<%s> of index %d\n", dataname, types, comp)
+		// dataname, _ := g_ecs_data.GetDataCompName(c.Name)
+		// types, _ := g_ecs_data.GetCompName(c.Type)
 		if !good {
-			err = fmt.Errorf("Invalid index into ComponentDefs of %d", idx)
-			return nil, err
+			return nil, fmt.Errorf("invalid index into ComponentDefs of %d", idx)
 		}
 		component, err := deserialize_init_component_typeless(r, p, c.Type, c.Name)
 		if err != nil {
 			return nil, err
 		}
-
 		name, good := g_ecs_data.GetDataCompName(c.Name)
 		if !good {
-			err = fmt.Errorf("Unkown Datatype of name %d", c.Name)
-			return nil, err
+			return nil, fmt.Errorf("unkown Datatype of name %d", c.Name)
 		}
 		Payload.Data.Components[name] = *component
 	}
@@ -255,27 +249,25 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 	if err != nil {
 		return ret, fmt.Errorf("reading compressed block size: %w", err)
 	}
-	blockData := make([]byte, blockSize)
-	_, err = r.Read(blockData)
+	ret.Data = make([]byte, blockSize)
+	_, err = r.Read(ret.Data)
 	if err != nil {
 		return ret, fmt.Errorf("reading block (size %d): %w", blockSize, err)
 	}
-	br := danet.NewBitReader(blockData)
+	br := danet.NewBitReader(ret.Data)
 	templ, err := p.ParseECSTemplate(br)
 	if err != nil {
 		return ret, fmt.Errorf("reading template: %w", err)
 	}
 	ret.Template = templ.ID
-	fmt.Printf("Parsing template %s of eid 0x%x\n", templ.Name, ret.EID)
 	entitiy, err := p.deserializeConstruction(br, templ)
 	if err != nil {
-		fmt.Printf("Error deserializing construction: %v\n", err)
 		return ret, fmt.Errorf("parsing entity: %w", err)
 	}
 	var eid EntityId
 	eid.handle = (entity_id_t(ret.Template))
 	p.Mgr.AddEntity(eid, entitiy)
-	ret.Data, err = io.ReadAll(br)
+	ret.Parsed = append(ret.Parsed, entitiy)
 	return
 }
 
@@ -333,7 +325,7 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 		serializer, _ = g_ecs_data.ComponentParsers[comp_type]
 	}
 	if serializer == nil {
-		return nil, fmt.Errorf("Serializer not found for datacomponent %s<%d>", g_ecs_data.comps.DataComponents[uint32(datacomp_type)].Name, comp_type)
+		return nil, fmt.Errorf("serializer not found for datacomponent %s<%d>", g_ecs_data.comps.DataComponents[uint32(datacomp_type)].Name, comp_type)
 	}
 	raw, err := serializer.Parse(r, mgr)
 	if err != nil {
