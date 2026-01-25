@@ -9,23 +9,18 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
 )
 
-func SizeOf[T any]() int {
-	var zero T
-	return int(unsafe.Sizeof(zero))
-}
-
 func EidParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n uint64
 	n, err = packet.ReadEID(r)
 	if err != nil {
 		return nil, err
 	}
-	return &n, nil
+	return n, nil
 }
 
 func GenericParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	bytes, err := r.ReadBytes(SizeOf[T]())
-	n := (*T)(unsafe.Pointer(&bytes[0]))
+	var n T
+	err = binary.Read(r, binary.LittleEndian, &n)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +38,7 @@ func GenericListParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any
 		if err != nil {
 			return nil, err
 		}
-		teid := peid.(*T)
-		n[i] = *teid
+		n[i] = peid.(T)
 	}
 	return n, nil
 }
@@ -55,11 +49,11 @@ func StorageParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 	if err != nil {
 		return nil, err
 	}
-	n.raw, err = r.ReadBits(int(blockSize))
+	n.Raw, err = r.ReadBits(int(blockSize))
 	if err != nil {
 		return nil, err
 	}
-	return &n, nil // TODO, implement IdFieldSerializer255
+	return n, nil // TODO, implement IdFieldSerializer255
 }
 
 func read_string(r *danet.BitReader, ctx *PacketECSParser) (ret string, err error) {
@@ -81,7 +75,7 @@ func StringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 	if err != nil {
 		return nil, err
 	}
-	return &n, nil
+	return n, nil
 }
 
 func ReadBool(r *danet.BitReader, ctx *PacketECSParser) (ret bool, err error) { // TODO, move this inside bitReader, not having a read bool is CRIMINAL I say
@@ -94,7 +88,7 @@ func ReadBool(r *danet.BitReader, ctx *PacketECSParser) (ret bool, err error) { 
 
 func BoolParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	out, err := ReadBool(r, ctx)
-	return &out, nil
+	return out, nil
 }
 
 func BoolListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -122,11 +116,7 @@ func readPartId(r *danet.BitReader) (PartId, error) {
 }
 
 func DmPartIdParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	n, err := readPartId(r)
-	if err != nil {
-		return nil, err
-	}
-	return &n, nil
+	return readPartId(r)
 }
 
 func DmPartIdListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -174,8 +164,7 @@ func EidListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 		if err != nil {
 			return nil, err
 		}
-		teid := peid.(*uint64)
-		n[i] = *teid
+		n[i] = peid.(uint64)
 	}
 	return n, nil
 }
@@ -249,7 +238,7 @@ func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 		}
 		n.Components[name] = *comp
 	}
-	return &n, nil
+	return n, nil
 }
 
 // this function is a critical case of I want to do it right or not at all
@@ -288,7 +277,7 @@ func TransformParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err err
 		return nil, err
 	}
 	var n TMatrix // empty matrix :(
-	return &n, nil
+	return n, nil
 }
 
 func RendInstDescParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -297,20 +286,20 @@ func RendInstDescParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err 
 	if err != nil {
 		return nil, err
 	}
-	n.v1 = uint32(temp)
+	n.V1 = uint32(temp)
 	temp, err = r.ReadCompressed()
 	if err != nil {
 		return nil, err
 	}
-	n.v2 = uint32(temp)
-	if n.v2 != 0 {
+	n.V2 = uint32(temp)
+	if n.V2 != 0 {
 		temp, err = r.ReadCompressed()
 		if err != nil {
 			return nil, err
 		}
-		n.v3 = uint32(temp)
+		n.V3 = uint32(temp)
 	}
-	return &n, nil
+	return n, nil
 }
 
 const ri_type_bits = 12
@@ -351,7 +340,7 @@ func RendInstSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err 
 	} else {
 		handle = make_handle(riType, riInst) - 1
 	}
-	return &handle, nil
+	return handle, nil
 }
 
 func RocketSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -404,7 +393,7 @@ func RocketSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 	}
 
 	var rocket Rocket
-	return &rocket, nil
+	return rocket, nil
 }
 
 // ai gave me these :)

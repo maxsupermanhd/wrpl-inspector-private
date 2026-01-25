@@ -9,8 +9,7 @@ func (mgr *EntityManager) AddEntity(eid EntityId, entity *Entity) {
 	mgr.Entities[eid.Index()] = entity
 	val, ok := entity.Data.Components["uid"]
 	if ok {
-		v := val.Value.(*int32) // TODO: explode
-		mgr.Uid_lookup[*v] = entity
+		mgr.Uid_lookup[val.Value.(int32)] = entity
 	}
 }
 
