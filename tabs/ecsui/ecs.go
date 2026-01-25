@@ -62,14 +62,14 @@ func (tab *ECSUI) Run() {
 			}
 			imgui.EndTabItem()
 		}
-		if imgui.BeginTabItem("Entities (by index)") {
+		if imgui.BeginTabItem("Entities (by EntityId)") {
 			if imgui.BeginChildStr("entities index content") {
 				tab.RunTabEntities()
 				imgui.EndChild()
 			}
 			imgui.EndTabItem()
 		}
-		if imgui.BeginTabItem("Entities (by eid)") {
+		if imgui.BeginTabItem("Entities (by UID)") {
 			if imgui.BeginChildStr("entities eid content") {
 				tab.RunTabEntitiesUidLookup()
 				imgui.EndChild()
@@ -94,17 +94,16 @@ func (tab *ECSUI) RunTabEntities() {
 			imgui.TableSetupColumn("type hash")
 			imgui.TableSetupColumn("value")
 			imgui.TableHeadersRow()
-			for i, k := range slices.Sorted(maps.Keys(ent.Data.Components)) {
-				v := ent.Data.Components[k]
+			for i, k := range ent.Data.Components {
 				imgui.TableNextRow()
 				imgui.TableNextColumn()
 				imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
 				imgui.TableNextColumn()
-				imgui.TextUnformatted(k)
+				imgui.TextUnformatted(k.Name)
 				imgui.TableNextColumn()
-				imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Type))
+				imgui.TextUnformatted(fmt.Sprintf("0x%08X", k.Comp.Type))
 				imgui.TableNextColumn()
-				imgui.TextUnformatted(spew.Sdump(v.Value))
+				imgui.TextUnformatted(spew.Sdump(k.Comp.Value))
 			}
 			imgui.EndTable()
 		}
@@ -125,17 +124,16 @@ func (tab *ECSUI) RunTabEntitiesUidLookup() {
 				imgui.TableSetupColumn("type hash")
 				imgui.TableSetupColumn("value")
 				imgui.TableHeadersRow()
-				for i, k := range slices.Sorted(maps.Keys(ent.Data.Components)) {
-					v := ent.Data.Components[k]
+				for i, k := range ent.Data.Components {
 					imgui.TableNextRow()
 					imgui.TableNextColumn()
 					imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
 					imgui.TableNextColumn()
-					imgui.TextUnformatted(k)
+					imgui.TextUnformatted(k.Name)
 					imgui.TableNextColumn()
-					imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Type))
+					imgui.TextUnformatted(fmt.Sprintf("0x%08X", k.Comp.Type))
 					imgui.TableNextColumn()
-					imgui.TextUnformatted(spew.Sdump(v.Value))
+					imgui.TextUnformatted(spew.Sdump(k.Comp.Value))
 				}
 				imgui.EndTable()
 			}
