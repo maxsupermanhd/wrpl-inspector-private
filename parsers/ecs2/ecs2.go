@@ -73,8 +73,6 @@ type HashedComponent struct {
 	Type uint32
 }
 
-type ComponentParser func(r io.Reader) (ret any, err error)
-
 type PacketECSParser struct {
 	TemplateDefs     map[TemplateIdx]*Template
 	ComponentDefs    map[ComponentIdx]*HashedComponent
