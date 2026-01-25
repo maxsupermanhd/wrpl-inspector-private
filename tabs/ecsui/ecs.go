@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/AllenDang/cimgui-go/imgui"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/inspector"
 )
 
@@ -44,20 +45,94 @@ func (tab *ECSUI) Init() {
 func (tab *ECSUI) Run() {
 	if imgui.BeginTabBar("ECS Tabs") {
 		if imgui.BeginTabItem("Components") {
-			imgui.BeginChildStr("components content")
-			tab.RunTabComponents()
-			imgui.EndChild()
+			if imgui.BeginChildStr("components content") {
+				tab.RunTabComponents()
+				imgui.EndChild()
+			}
 			imgui.EndTabItem()
 		}
 		if imgui.BeginTabItem("Templates") {
-			imgui.BeginChildStr("templates content")
-			tab.RunTabTemplates()
-			imgui.EndChild()
+			if imgui.BeginChildStr("templates content") {
+				tab.RunTabTemplates()
+				imgui.EndChild()
+			}
 			imgui.EndTabItem()
 		}
+		if imgui.BeginTabItem("Entities (by index)") {
+			if imgui.BeginChildStr("entities index content") {
+				tab.RunTabEntities()
+				imgui.EndChild()
+			}
+			imgui.EndTabItem()
+		}
+		if imgui.BeginTabItem("Entities (by eid)") {
+			if imgui.BeginChildStr("entities eid content") {
+				tab.RunTabEntitiesUidLookup()
+				imgui.EndChild()
+			}
+			imgui.EndTabItem()
+		}
+
 		imgui.EndTabBar()
 	}
-	// imgui.TextUnformatted(fmt.Sprintf("Messages: %d", len(tab.ecs.Messages)))
+}
+
+func (tab *ECSUI) RunTabEntities() {
+	for _, entIdx := range slices.Sorted(maps.Keys(tab.ecs.Mgr.Entities)) {
+		ent := tab.ecs.Mgr.Entities[entIdx]
+		imgui.TextUnformatted(fmt.Sprintf("Entity %v %q", entIdx, ent.Template))
+		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
+		if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
+			imgui.TableSetupColumn("n")
+			imgui.TableSetupColumn("name")
+			imgui.TableSetupColumn("type hash")
+			imgui.TableSetupColumn("value")
+			imgui.TableHeadersRow()
+			for i, k := range slices.Sorted(maps.Keys(ent.Data.Components)) {
+				v := ent.Data.Components[k]
+				imgui.TableNextRow()
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(k)
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Type))
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(spew.Sdump(v.Value))
+			}
+			imgui.EndTable()
+		}
+	}
+}
+
+func (tab *ECSUI) RunTabEntitiesUidLookup() {
+	for _, uid := range slices.Sorted(maps.Keys(tab.ecs.Mgr.Uid_lookup)) {
+		ent := tab.ecs.Mgr.Uid_lookup[uid]
+		if imgui.TreeNodeStr(fmt.Sprintf("Entity %v %q", uid, ent.Template)) {
+			flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
+			if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
+				imgui.TableSetupColumn("n")
+				imgui.TableSetupColumn("name")
+				imgui.TableSetupColumn("type hash")
+				imgui.TableSetupColumn("value")
+				imgui.TableHeadersRow()
+				for i, k := range slices.Sorted(maps.Keys(ent.Data.Components)) {
+					v := ent.Data.Components[k]
+					imgui.TableNextRow()
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(k)
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(fmt.Sprintf("0x%08X", v.Type))
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(spew.Sdump(v.Value))
+				}
+				imgui.EndTable()
+			}
+			imgui.TreePop()
+		}
+	}
 }
 
 func (tab *ECSUI) RunTabComponents() {

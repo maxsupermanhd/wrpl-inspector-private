@@ -340,8 +340,8 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 		return nil, err
 	}
 	var comp Component
-	comp.value = raw
-	comp.c_type = comp_type
+	comp.Value = raw
+	comp.Type = comp_type
 	return &comp, nil
 }
 

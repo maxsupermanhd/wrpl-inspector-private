@@ -15,8 +15,8 @@ func (id EntityId) Index() uint32 { // we probably only need index
 }
 
 type Component struct {
-	value  any           // actual data, I think this will ensure the Component owns?
-	c_type ComponentHash // what type
+	Value any           // actual data, I think this will ensure the Component owns?
+	Type  ComponentHash // what type
 }
 
 type Object struct {
