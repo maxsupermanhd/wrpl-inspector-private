@@ -75,23 +75,20 @@ func (tab KillsTab) Run() {
 			imgui.TextUnformatted(fmt.Sprint(v.DestroyedWeapon))
 			imgui.TableNextColumn()
 
-			entity, good := tab.ecs.GetEntityByUid(int32(v.KillerUid))
-			if !good {
-				imgui.TextUnformatted(fmt.Sprint(""))
+			if v.ResolvedKiller == nil {
+				imgui.TextUnformatted("!!unresolved killer!!")
 			} else {
-				name, _ := ecs2.GetObjectData[string](&entity.Data, "unit__className")
+				name, _ := ecs2.GetObjectData[string](&v.ResolvedKiller.Data, "unit__className")
 				imgui.TextUnformatted(fmt.Sprint(name))
 			}
 			imgui.TableNextColumn()
 
-			entity, good = tab.ecs.GetEntityByUid(int32(v.VictimUid))
-			if !good {
-				imgui.TextUnformatted(fmt.Sprint(""))
+			if v.ResolvedVictim == nil {
+				imgui.TextUnformatted("!!unresolved victim!!")
 			} else {
-				name, _ := ecs2.GetObjectData[string](&entity.Data, "unit__className")
+				name, _ := ecs2.GetObjectData[string](&v.ResolvedVictim.Data, "unit__className")
 				imgui.TextUnformatted(fmt.Sprint(name))
 			}
-			imgui.TableNextColumn()
 		}
 		imgui.EndTable()
 	}

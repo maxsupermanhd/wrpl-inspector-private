@@ -85,7 +85,11 @@ func NewPacketECSParser() *PacketECSParser { // I removed parsers because that d
 		TemplateDefs:  map[TemplateIdx]*Template{},
 		ComponentDefs: map[ComponentIdx]*HashedComponent{},
 		Messages:      []ParsedPacketECS{},
-		Mgr:           EntityManager{},
+		Interned:      map[uint16]string{},
+		Mgr: EntityManager{
+			Entities:   map[uint32]*Entity{},
+			Uid_lookup: map[int32]*Entity{},
+		},
 	}
 }
 

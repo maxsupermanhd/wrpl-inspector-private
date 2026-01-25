@@ -2,6 +2,7 @@ package kills2
 
 import (
 	"encoding/binary"
+	"fmt"
 	"main/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
@@ -12,11 +13,13 @@ type KillEntry struct {
 	Seq         uint64
 	CurrentTime uint32
 
-	KillerPid uint32
-	KillerUid uint16
+	KillerPid      uint32
+	KillerUid      uint16
+	ResolvedKiller *ecs2.Entity
 
-	VictimPid uint32
-	VictimUid uint16
+	VictimPid      uint32
+	VictimUid      uint16
+	ResolvedVictim *ecs2.Entity
 
 	PlayerVehicle   string
 	PlayerWeapon    string
@@ -26,6 +29,7 @@ type KillEntry struct {
 type PacketKillParser struct {
 	KeepKills bool
 	Kills     []KillEntry
+	ECS       *ecs2.EntityManager
 }
 
 func (p *PacketKillParser) Name() string {
@@ -80,12 +84,22 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 			if err != nil {
 				return nil, err
 			}
+			resolved, ok := p.ECS.GetEntityByUid(int32(parsed.VictimUid))
+			if !ok {
+				return nil, fmt.Errorf("failed to resolve victim uid %v", parsed.VictimUid)
+			}
+			parsed.ResolvedVictim = resolved
 		case 4:
 			err = binary.Read(r, binary.LittleEndian, &parsed.KillerUid)
 			parsed.KillerUid &= 0x7FF
 			if err != nil {
 				return nil, err
 			}
+			resolved, ok := p.ECS.GetEntityByUid(int32(parsed.KillerUid))
+			if !ok {
+				return nil, fmt.Errorf("failed to resolve victim uid %v", parsed.KillerUid)
+			}
+			parsed.ResolvedKiller = resolved
 		case 5:
 			_, err = r.ReadBytes(4)
 			if err != nil {
