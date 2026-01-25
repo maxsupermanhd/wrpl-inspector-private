@@ -6,17 +6,20 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/inspector"
+	"github.com/maxsupermanhd/wrpl-inspector/inspector/imui"
 )
 
 type ECSUI struct {
-	rpl      *inspector.LoadedReplay
-	ecs      *ecs2.PacketECSParser
-	hashName map[uint32]string
-	hashType map[uint32]string
+	rpl            *inspector.LoadedReplay
+	ecs            *ecs2.PacketECSParser
+	hashName       map[uint32]string
+	hashType       map[uint32]string
+	templateFilter string
 }
 
 func NewECSUI(rpl *inspector.LoadedReplay, ecs *ecs2.PacketECSParser, hashName, hashType map[uint32]string) *ECSUI {
@@ -43,6 +46,7 @@ func (tab *ECSUI) Init() {
 }
 
 func (tab *ECSUI) Run() {
+	imgui.InputTextWithHint("filter templates", "", &tab.templateFilter, 0, imui.ImEmptyInputCallback)
 	if imgui.BeginTabBar("ECS Tabs") {
 		if imgui.BeginTabItem("Components") {
 			if imgui.BeginChildStr("components content") {
@@ -72,7 +76,6 @@ func (tab *ECSUI) Run() {
 			}
 			imgui.EndTabItem()
 		}
-
 		imgui.EndTabBar()
 	}
 }
@@ -80,6 +83,9 @@ func (tab *ECSUI) Run() {
 func (tab *ECSUI) RunTabEntities() {
 	for _, entIdx := range slices.Sorted(maps.Keys(tab.ecs.Mgr.Entities)) {
 		ent := tab.ecs.Mgr.Entities[entIdx]
+		if !strings.Contains(ent.Template, tab.templateFilter) {
+			continue
+		}
 		imgui.TextUnformatted(fmt.Sprintf("Entity %v %q", entIdx, ent.Template))
 		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
 		if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
@@ -108,6 +114,9 @@ func (tab *ECSUI) RunTabEntities() {
 func (tab *ECSUI) RunTabEntitiesUidLookup() {
 	for _, uid := range slices.Sorted(maps.Keys(tab.ecs.Mgr.Uid_lookup)) {
 		ent := tab.ecs.Mgr.Uid_lookup[uid]
+		if !strings.Contains(ent.Template, tab.templateFilter) {
+			continue
+		}
 		if imgui.TreeNodeStr(fmt.Sprintf("Entity %v %q", uid, ent.Template)) {
 			flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
 			if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
@@ -167,6 +176,9 @@ func (tab *ECSUI) RunTabTemplates() {
 	imgui.TextUnformatted(fmt.Sprintf("Template defs: %d", len(tab.ecs.TemplateDefs)))
 	for _, k := range slices.Sorted(maps.Keys(tab.ecs.TemplateDefs)) {
 		v := tab.ecs.TemplateDefs[k]
+		if !strings.Contains(v.Name, tab.templateFilter) {
+			continue
+		}
 		imgui.TextUnformatted(fmt.Sprintf("%v - %v (%v components)", v.ID, v.Name, len(v.Components)))
 		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
 		if imgui.BeginTableV("components", 6, flags, imgui.Vec2{}, 0) {
