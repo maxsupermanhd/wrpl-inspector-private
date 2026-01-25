@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"main/parsers/ecs2"
 	"main/parsers/stub0"
 	"main/parsers/stub1"
+	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
 	"main/tabs/resultsui"
@@ -20,14 +23,18 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/award"
 	packetchat "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/chat"
-	packetecs "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/ecs"
 	packetkill "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/kill"
 	packetmovement "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/movement"
 	packetslot "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/slot"
 )
 
+var (
+	chms *ecs2.ComponentHashMaps
+)
+
 // ^0f8bfe0e090001(........)
 func main() {
+	chms = noerr(ecs2.ReadComponentHashMaps(bytes.NewReader(noerr(os.ReadFile("ecshashes.json")))))
 	ui := &inspector.UI{
 		InitFont:        noerr(os.ReadFile("HackNerdFontMono-Regular.ttf")),
 		ProcessReplayFn: replayProcessor,
@@ -39,7 +46,7 @@ func main() {
 }
 
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
-	ecs := packetecs.NewPacketECSParser()
+	ecs := ecs2.NewPacketECSParser(nil)
 	slot := &packetslot.PacketSlotParser{KeepMessages: true}
 	parsers := []packet.PacketParser{
 		&packetchat.PacketChatParser{},
@@ -59,8 +66,14 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, genBlkJSONTab("Results raw", rpl.Results))
 	tabs = append(tabs, noerr(resultsui.NewResultsTab(rpl.Results)))
 	tabs = append(tabs, packetui.NewPacketsTab(rpl, streams...))
-	tabs = append(tabs, ecsui2.NewECSUI(rpl, ecs))
+	hashTypes := chms.ComponentNames
+	hashNames := map[uint32]string{}
+	for k, v := range chms.DataComponents {
+		hashNames[k] = v.Name
+	}
+	tabs = append(tabs, ecsui2.NewECSUI(rpl, ecs, hashNames, hashTypes))
 	tabs = append(tabs, interpreter2.NewByteInterpreterTab(rpl, streams...))
+	tabs = append(tabs, bitshiftui.NewBitShiftUI())
 	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
 	return parsers, tabs
