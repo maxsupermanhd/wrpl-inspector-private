@@ -69,8 +69,8 @@ type Template struct {
 }
 
 type HashedComponent struct {
-	Name Datacomp_hash_t
-	Type component_hash_t
+	Name DataComponentHash
+	Type ComponentHash
 }
 
 type PacketECSParser struct {
@@ -195,8 +195,8 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 	var comp uint16
 	comp = 0
 	var Payload Entity
-	Payload.template = templ.Name
-	Payload.data.components = make(map[string]Component)
+	Payload.Template = templ.Name
+	Payload.Data.Components = make(map[string]Component)
 	for i := uint16(0); i < uint16(compCount); i++ {
 		var ofs uint64 // actualy uint16
 		if templateComponentsCount < 256 {
@@ -223,8 +223,8 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 		idx := templ.Components[comp] // im just going to assume its always good :|
 
 		c, good := p.ComponentDefs[idx]
-		dataname, _ := g_ecs_data.getDataCompName(c.Name)
-		types, _ := g_ecs_data.getCompName(c.Type)
+		dataname, _ := g_ecs_data.GetDataCompName(c.Name)
+		types, _ := g_ecs_data.GetCompName(c.Type)
 		fmt.Printf("Parsing %s<%s> of index %d\n", dataname, types, comp)
 		if !good {
 			err = fmt.Errorf("Invalid index into ComponentDefs of %d", idx)
@@ -235,12 +235,12 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 			return nil, err
 		}
 
-		name, good := g_ecs_data.getDataCompName(c.Name)
+		name, good := g_ecs_data.GetDataCompName(c.Name)
 		if !good {
 			err = fmt.Errorf("Unkown Datatype of name %d", c.Name)
 			return nil, err
 		}
-		Payload.data.components[name] = *component
+		Payload.Data.Components[name] = *component
 	}
 	return &Payload, nil
 }
@@ -322,7 +322,7 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 	return dat, nil
 }
 
-func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParser, comp_type component_hash_t, datacomp_type Datacomp_hash_t) (ret *Component, err error) {
+func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParser, comp_type ComponentHash, datacomp_type DataComponentHash) (ret *Component, err error) {
 	if comp_type == 0 {
 		return nil, nil
 	}
@@ -346,7 +346,7 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 }
 
 func deserialize_child_component(r *danet.BitReader, mgr *PacketECSParser) (ret *Component, err error) {
-	var type_id component_hash_t
+	var type_id ComponentHash
 	err = binary.Read(r, binary.LittleEndian, &type_id)
 	if err != nil {
 		return nil, err

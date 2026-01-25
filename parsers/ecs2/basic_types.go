@@ -1,7 +1,7 @@
 package ecs2
 
-type component_hash_t uint32
-type Datacomp_hash_t uint32
+type ComponentHash uint32
+type DataComponentHash uint32
 
 type Point2 struct {
 	x float32

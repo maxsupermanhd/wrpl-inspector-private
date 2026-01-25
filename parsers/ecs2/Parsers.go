@@ -237,7 +237,7 @@ func IStringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 
 func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n Object
-	n.components = make(map[string]Component)
+	n.Components = make(map[string]Component)
 	count, err := r.ReadCompressed()
 	if err != nil {
 		return nil, err
@@ -251,7 +251,7 @@ func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 		if err != nil {
 			return nil, err
 		}
-		n.components[*name] = *comp
+		n.Components[*name] = *comp
 	}
 	return &n, nil
 }
@@ -483,24 +483,24 @@ var (
 )
 
 func (g_data *GlobalECSData) initialize_parsers() error {
-	g_data.ComponentParsers = make(map[component_hash_t]ComponentParser)
-	g_data.DataComponentParsers = make(map[Datacomp_hash_t]ComponentParser)
+	g_data.ComponentParsers = make(map[ComponentHash]ComponentParser)
+	g_data.DataComponentParsers = make(map[DataComponentHash]ComponentParser)
 	for key, value := range g_data.comps.ComponentNames {
 		f, exists := default_comp_map[value]
 		if exists { // exists
-			g_data.ComponentParsers[component_hash_t(key)] = f
+			g_data.ComponentParsers[ComponentHash(key)] = f
 		}
 	}
 	for key, value := range g_data.comps.DataComponents {
 		if value.CustomLoader {
 			f, exists := default_datacomp_map[value.Name]
 			if exists {
-				g_data.DataComponentParsers[Datacomp_hash_t(key)] = f
+				g_data.DataComponentParsers[DataComponentHash(key)] = f
 			}
 		} else { // if the datacomp doesnt define a custom one, steal it from the component
-			f, exists := g_data.ComponentParsers[component_hash_t(value.ComponentHash)]
+			f, exists := g_data.ComponentParsers[ComponentHash(value.ComponentHash)]
 			if exists {
-				g_data.DataComponentParsers[Datacomp_hash_t(key)] = f
+				g_data.DataComponentParsers[DataComponentHash(key)] = f
 			}
 		}
 	}

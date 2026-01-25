@@ -15,15 +15,15 @@ func (id EntityId) Index() uint32 { // we probably only need index
 }
 
 type Component struct {
-	value  any              // actual data, I think this will ensure the Component owns?
-	c_type component_hash_t // what type
+	value  any           // actual data, I think this will ensure the Component owns?
+	c_type ComponentHash // what type
 }
 
 type Object struct {
-	components map[string]Component // maps a name to a specific component
+	Components map[string]Component // maps a name to a specific component
 }
 
 type Entity struct {
-	template string
-	data     Object
+	Template string
+	Data     Object
 }

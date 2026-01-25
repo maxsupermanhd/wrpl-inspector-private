@@ -19,11 +19,11 @@ type ComponentHashMaps struct {
 
 type GlobalECSData struct {
 	comps                *ComponentHashMaps
-	DataComponentParsers map[Datacomp_hash_t]ComponentParser
-	ComponentParsers     map[component_hash_t]ComponentParser // this is needed as ecs::Array parser needs to parse a component with only type hash
+	DataComponentParsers map[DataComponentHash]ComponentParser
+	ComponentParsers     map[ComponentHash]ComponentParser // this is needed as ecs::Array parser needs to parse a component with only type hash
 }
 
-func (g *GlobalECSData) getDataCompName(hash Datacomp_hash_t) (string, bool) {
+func (g *GlobalECSData) GetDataCompName(hash DataComponentHash) (string, bool) {
 	str, good := g.comps.DataComponents[uint32(hash)]
 	if !good {
 		return "", good
@@ -31,7 +31,7 @@ func (g *GlobalECSData) getDataCompName(hash Datacomp_hash_t) (string, bool) {
 	return str.Name, good
 }
 
-func (g *GlobalECSData) getCompName(hash component_hash_t) (string, bool) {
+func (g *GlobalECSData) GetCompName(hash ComponentHash) (string, bool) {
 	str, good := g.comps.ComponentNames[uint32(hash)]
 	return str, good
 }
