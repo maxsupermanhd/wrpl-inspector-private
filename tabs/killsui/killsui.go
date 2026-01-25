@@ -36,17 +36,20 @@ func (tab *KillsTab) Init() {
 func (tab KillsTab) Run() {
 	imgui.TextUnformatted(fmt.Sprintf("Kills: %d, ECS entities: %d", len(tab.kills.Kills), len(tab.ecs.Uid_lookup)))
 	flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
-	if imgui.BeginTableV("kills", 10, flags, imgui.Vec2{}, 0) {
+	if imgui.BeginTableV("kills", 12, flags, imgui.Vec2{}, 0) {
 		imgui.TableSetupColumn("n")
 		imgui.TableSetupColumn("seq")
 		imgui.TableSetupColumn("time")
-		imgui.TableSetupColumn("control")
-		imgui.TableSetupColumn("killerID")
-		imgui.TableSetupColumn("killer vehicle")
-		imgui.TableSetupColumn("killerUID")
-		imgui.TableSetupColumn("victimUID")
-		imgui.TableSetupColumn("weapon")
-		imgui.TableSetupColumn("victimID")
+		imgui.TableSetupColumn("KillerPid")
+		imgui.TableSetupColumn("KillerUid")
+		imgui.TableSetupColumn("KillerVehicle")
+		imgui.TableSetupColumn("KillerWeapon")
+		imgui.TableSetupColumn("VictimPid")
+		imgui.TableSetupColumn("VictimUid")
+		imgui.TableSetupColumn("DestroyedWeapon")
+		imgui.TableSetupColumn("VehicleFromKillerUid")
+		imgui.TableSetupColumn("VehicleFromVictimUid")
+
 		imgui.TableHeadersRow()
 		for i, v := range tab.kills.Kills {
 			imgui.TableNextRow()
@@ -57,19 +60,38 @@ func (tab KillsTab) Run() {
 			imgui.TableNextColumn()
 			imgui.TextUnformatted((time.Duration(v.CurrentTime) * time.Millisecond).String())
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.Control))
+			imgui.TextUnformatted(fmt.Sprint(v.KillerPid))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.KillerID))
+			imgui.TextUnformatted(fmt.Sprint(v.KillerUid))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.KillerVehicle))
+			imgui.TextUnformatted(fmt.Sprint(v.PlayerVehicle))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.KillerUID))
+			imgui.TextUnformatted(fmt.Sprint(v.PlayerWeapon))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.VictimUID))
+			imgui.TextUnformatted(fmt.Sprint(v.VictimPid))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.Weapon))
+			imgui.TextUnformatted(fmt.Sprint(v.VictimUid))
 			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.VictimID))
+			imgui.TextUnformatted(fmt.Sprint(v.DestroyedWeapon))
+			imgui.TableNextColumn()
+
+			entity, good := tab.ecs.GetEntityByUid(int32(v.KillerUid))
+			if !good {
+				imgui.TextUnformatted(fmt.Sprint(""))
+			} else {
+				name, _ := ecs2.GetObjectData[string](&entity.Data, "unit__className")
+				imgui.TextUnformatted(fmt.Sprint(name))
+			}
+			imgui.TableNextColumn()
+
+			entity, good = tab.ecs.GetEntityByUid(int32(v.VictimUid))
+			if !good {
+				imgui.TextUnformatted(fmt.Sprint(""))
+			} else {
+				name, _ := ecs2.GetObjectData[string](&entity.Data, "unit__className")
+				imgui.TextUnformatted(fmt.Sprint(name))
+			}
+			imgui.TableNextColumn()
 		}
 		imgui.EndTable()
 	}

@@ -2,7 +2,7 @@ package kills2
 
 import (
 	"encoding/binary"
-	"fmt"
+	"main/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
@@ -12,13 +12,15 @@ type KillEntry struct {
 	Seq         uint64
 	CurrentTime uint32
 
-	Control       byte
-	KillerID      byte
-	KillerVehicle string
-	KillerUID     uint16
-	VictimUID     uint16
-	Weapon        string
-	VictimID      uint32
+	KillerPid uint32
+	KillerUid uint16
+
+	VictimPid uint32
+	VictimUid uint16
+
+	PlayerVehicle   string
+	PlayerWeapon    string
+	DestroyedWeapon string
 }
 
 type PacketKillParser struct {
@@ -48,38 +50,86 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 	}
 	var err error
 	r := danet.NewBitReader(pk.PacketPayload)
-	parsed.Control, err = r.ReadByte()
+	var serializer = ecs2.IdFieldSerializer32{}
+	r.IgnoreBytes(4)
+	fields, err := serializer.ReadFieldsSizeAndFlag(r)
 	if err != nil {
-		return nil, fmt.Errorf("reading control: %w", err)
+		return nil, err
 	}
-	r.IgnoreBytes(3) // always 0x00FE3F
-	parsed.KillerID, err = r.ReadByte()
-	if err != nil {
-		return nil, fmt.Errorf("reading killer id: %w", err)
-	}
-	r.IgnoreBytes(3) // 0x000000
-	parsed.KillerVehicle, err = r.ReadLenStr()
-	if err != nil {
-		return nil, fmt.Errorf("reading killer vehicle: %w", err)
-	}
-	err = binary.Read(r, binary.LittleEndian, &parsed.KillerUID)
-	if err != nil {
-		return nil, fmt.Errorf("reading killer uid: %w", err)
-	}
-	err = binary.Read(r, binary.LittleEndian, &parsed.VictimUID)
-	if err != nil {
-		return nil, fmt.Errorf("reading victim uid: %w", err)
-	}
-	r.IgnoreBits(1) // unk bool
-	r.IgnoreBits(8) // unk uint8
-	r.IgnoreBits(8) // unk uint8
-	parsed.Weapon, err = r.ReadLenStr()
-	if err != nil {
-		return nil, fmt.Errorf("reading weapon: %w", err)
-	}
-	err = binary.Read(r, binary.LittleEndian, &parsed.VictimID)
-	if err != nil {
-		return nil, fmt.Errorf("reading victim id: %w", err)
+	var index uint8
+	for fields > 0 {
+		var uVar3 uint8
+		for fields>>uVar3&1 == 0 {
+			uVar3++
+		}
+		fields = fields & ^(1 << (uVar3 & 0x1f))
+		switch uVar3 {
+		case 1:
+			err = binary.Read(r, binary.LittleEndian, &parsed.KillerPid)
+			if err != nil {
+				return nil, err
+			}
+		case 2:
+			parsed.PlayerVehicle, err = r.ReadLenStr()
+			if err != nil {
+				return nil, err
+			}
+		case 3:
+			err = binary.Read(r, binary.LittleEndian, &parsed.VictimUid)
+			parsed.VictimUid &= 0x7FF
+			if err != nil {
+				return nil, err
+			}
+		case 4:
+			err = binary.Read(r, binary.LittleEndian, &parsed.KillerUid)
+			parsed.KillerUid &= 0x7FF
+			if err != nil {
+				return nil, err
+			}
+		case 5:
+			_, err = r.ReadBytes(4)
+			if err != nil {
+				return nil, err
+			}
+		case 6:
+			_, err = r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+		case 7:
+			_, err = r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+		case 8:
+			_, err = r.ReadBits(1)
+			if err != nil {
+				return nil, err
+			}
+		case 9:
+			_, err = r.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+		case 0xa:
+			parsed.PlayerWeapon, err = r.ReadLenStr()
+			if err != nil {
+				return nil, err
+			}
+		case 0xb:
+			err = binary.Read(r, binary.LittleEndian, &parsed.VictimPid)
+			if err != nil {
+				return nil, err
+			}
+		case 0xc:
+			parsed.DestroyedWeapon, err = r.ReadLenStr()
+			if err != nil {
+				return nil, err
+			}
+		default:
+			serializer.SkipReadingField(index, r)
+		}
+		index += 1
 	}
 	if p.KeepKills {
 		p.Kills = append(p.Kills, parsed)
