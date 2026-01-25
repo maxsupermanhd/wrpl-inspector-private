@@ -44,6 +44,7 @@ type Message struct {
 	EID      uint64
 	Template TemplateIdx
 	Data     []byte
+	Parsed   []any
 }
 
 type ParsedPacketECS struct {
