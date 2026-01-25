@@ -65,7 +65,6 @@ type Template struct {
 	ID         TemplateIdx
 	Name       string
 	Components []ComponentIdx
-	Parsed     []any
 }
 
 type HashedComponent struct {
