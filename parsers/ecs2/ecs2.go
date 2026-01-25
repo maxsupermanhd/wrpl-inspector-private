@@ -264,8 +264,7 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 	if err != nil {
 		return ret, fmt.Errorf("parsing entity: %w", err)
 	}
-	var eid EntityId
-	eid.handle = (entity_id_t(ret.Template))
+	eid := EntityID(ret.Template)
 	p.Mgr.AddEntity(eid, entitiy)
 	ret.Parsed = append(ret.Parsed, entitiy)
 	return

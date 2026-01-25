@@ -5,7 +5,7 @@ type EntityManager struct {
 	Uid_lookup map[int32]*Entity
 }
 
-func (mgr *EntityManager) AddEntity(eid EntityId, entity *Entity) {
+func (mgr *EntityManager) AddEntity(eid EntityID, entity *Entity) {
 	mgr.Entities[eid.Index()] = entity
 	val, ok := entity.Data.Components["uid"]
 	if ok {
@@ -13,7 +13,7 @@ func (mgr *EntityManager) AddEntity(eid EntityId, entity *Entity) {
 	}
 }
 
-func (mgr *EntityManager) GetEntity(eid EntityId) (*Entity, bool) { // TODO, maybe return an err instead?
+func (mgr *EntityManager) GetEntity(eid EntityID) (*Entity, bool) { // TODO, maybe return an err instead?
 	val, ok := mgr.Entities[eid.Index()]
 	return val, ok
 }
