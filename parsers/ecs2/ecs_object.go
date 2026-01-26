@@ -36,7 +36,6 @@ func (o *Object) AddComponent(comp *Component, name string) {
 	named.Name = name
 	named.Comp = comp
 	o.Components = append(o.Components, named)
-	return
 }
 
 func (o *Object) GetData(name string) (any, bool) {
