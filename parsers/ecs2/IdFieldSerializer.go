@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 )
 
 const MAX_FIELDS_NUM = 32

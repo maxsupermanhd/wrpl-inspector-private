@@ -22,8 +22,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 
 	"github.com/pierrec/lz4/v4"
 )

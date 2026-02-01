@@ -17,16 +17,16 @@ import (
 
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector"
-	basictabs "github.com/maxsupermanhd/wrpl-inspector/inspector/basicTabs"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/packetui"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/playersui"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
-	packetaward "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/award"
-	packetchat "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/chat"
-	packetmovement "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/movement"
-	packetslot "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/slot"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"
+	basictabs "github.com/maxsupermanhd/wrpl-inspector/v2/inspector/basicTabs"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/packetui"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/playersui"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
+	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
+	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
+	packetmovement "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/movement"
+	packetslot "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/slot"
 )
 
 var (

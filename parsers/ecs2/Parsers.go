@@ -5,8 +5,8 @@ import (
 
 	"unsafe"
 
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
 func EidParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {

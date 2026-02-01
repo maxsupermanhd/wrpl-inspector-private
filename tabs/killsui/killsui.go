@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/AllenDang/cimgui-go/imgui"
-	packetslot "github.com/maxsupermanhd/wrpl-inspector/wrpl/packet/parser/slot"
+	packetslot "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/slot"
 )
 
 type KillsTab struct {

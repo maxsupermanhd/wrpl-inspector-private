@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/AllenDang/cimgui-go/imgui"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 )
 
 type ResultsTab struct {

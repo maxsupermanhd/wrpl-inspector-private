@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/AllenDang/cimgui-go/imgui"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/imui"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/imui"
 )
 
 type BitShiftUI struct {

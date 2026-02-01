@@ -1,8 +1,8 @@
 package stub1
 
 import (
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/danet"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
 type StubData struct {

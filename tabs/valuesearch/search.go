@@ -3,10 +3,10 @@ package valuesearch
 import (
 	"bytes"
 
-	"github.com/maxsupermanhd/wrpl-inspector/inspector"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/imui"
-	"github.com/maxsupermanhd/wrpl-inspector/inspector/packetui"
-	"github.com/maxsupermanhd/wrpl-inspector/wrpl/packet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/imui"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/packetui"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
 type ValueSearchTab struct {
