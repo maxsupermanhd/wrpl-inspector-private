@@ -200,13 +200,13 @@ func read_istring(r *danet.BitReader, ctx *PacketECSParser) (ret string, err err
 		return "", err
 	}
 	strIndex := binary.LittleEndian.Uint16(str_index_bytes)
-	str, exists := ctx.Interned[strIndex]
+	str, exists := ctx.InternedStrings[strIndex]
 	if !exists {
 		str, err := read_string(r, ctx)
 		if err != nil {
 			return "", err
 		}
-		ctx.Interned[strIndex] = str
+		ctx.InternedStrings[strIndex] = str
 		return str, nil
 	}
 	return str, nil
@@ -466,25 +466,25 @@ var (
 	}
 )
 
-func (g_data *GlobalECSData) initialize_parsers() error {
-	g_data.ComponentParsers = make(map[ComponentHash]ComponentParser)
-	g_data.DataComponentParsers = make(map[DataComponentHash]ComponentParser)
-	for key, value := range g_data.comps.ComponentNames {
+func (chm *ComponentHashMaps) InitializeParsers() error {
+	chm.ComponentParsers = make(map[ComponentHash]ComponentParser)
+	chm.DataComponentParsers = make(map[DataComponentHash]ComponentParser)
+	for key, value := range chm.ComponentNames {
 		f, exists := default_comp_map[value]
 		if exists { // exists
-			g_data.ComponentParsers[ComponentHash(key)] = f
+			chm.ComponentParsers[ComponentHash(key)] = f
 		}
 	}
-	for key, value := range g_data.comps.DataComponents {
+	for key, value := range chm.DataComponents {
 		if value.CustomLoader {
 			f, exists := default_datacomp_map[value.Name]
 			if exists {
-				g_data.DataComponentParsers[DataComponentHash(key)] = f
+				chm.DataComponentParsers[DataComponentHash(key)] = f
 			}
 		} else { // if the datacomp doesnt define a custom one, steal it from the component
-			f, exists := g_data.ComponentParsers[ComponentHash(value.ComponentHash)]
+			f, exists := chm.ComponentParsers[ComponentHash(value.ComponentHash)]
 			if exists {
-				g_data.DataComponentParsers[DataComponentHash(key)] = f
+				chm.DataComponentParsers[DataComponentHash(key)] = f
 			}
 		}
 	}

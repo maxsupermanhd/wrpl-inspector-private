@@ -73,23 +73,25 @@ type HashedComponent struct {
 }
 
 type PacketECSParser struct {
-	TemplateDefs  map[TemplateIdx]*Template
-	ComponentDefs map[ComponentIdx]*HashedComponent
-	Messages      []ParsedPacketECS
-	Interned      map[uint16]string
-	Mgr           EntityManager
+	TemplateDefs    map[TemplateIdx]*Template
+	ComponentDefs   map[ComponentIdx]*HashedComponent
+	Messages        []ParsedPacketECS
+	InternedStrings map[uint16]string
+	Mgr             EntityManager
+	Maps            ComponentHashMaps
 }
 
-func NewPacketECSParser() *PacketECSParser { // I removed parsers because that data will not change across iterations, so no need to reload it
+func NewPacketECSParser(m ComponentHashMaps) *PacketECSParser { // I removed parsers because that data will not change across iterations, so no need to reload it
 	return &PacketECSParser{
-		TemplateDefs:  map[TemplateIdx]*Template{},
-		ComponentDefs: map[ComponentIdx]*HashedComponent{},
-		Messages:      []ParsedPacketECS{},
-		Interned:      map[uint16]string{},
+		TemplateDefs:    map[TemplateIdx]*Template{},
+		ComponentDefs:   map[ComponentIdx]*HashedComponent{},
+		Messages:        []ParsedPacketECS{},
+		InternedStrings: map[uint16]string{},
 		Mgr: EntityManager{
 			Entities:   map[uint32]*Entity{},
 			Uid_lookup: map[int32]*Entity{},
 		},
+		Maps: m,
 	}
 }
 
@@ -180,7 +182,6 @@ func (p *PacketECSParser) ParseECSTemplate(r *danet.BitReader) (*Template, error
 }
 
 func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Template) (ret *Entity, err error) {
-
 	templateComponentsCount := uint16(len(templ.Components))
 	var compCount uint64
 	if templateComponentsCount < 256 {
@@ -222,7 +223,10 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 			err = fmt.Errorf("invalid template component index %d for template local idx %d<%s> (count %d)", comp, templ.ID, templ.Name, templateComponentsCount)
 			return nil, err
 		}
-		idx := templ.Components[comp] // im just going to assume its always good :|
+		if comp >= uint16(len(templ.Components)) {
+			return nil, fmt.Errorf("template components idx out of bounds (%d comp, %d len)", comp, len(templ.Components))
+		}
+		idx := templ.Components[comp]
 		c, good := p.ComponentDefs[idx]
 		// dataname, _ := g_ecs_data.GetDataCompName(c.Name)
 		// types, _ := g_ecs_data.GetCompName(c.Type)
@@ -233,7 +237,7 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 		if err != nil {
 			return nil, err
 		}
-		name, good := g_ecs_data.GetDataCompName(c.Name)
+		name, good := p.Maps.GetDataCompName(c.Name)
 		if !good {
 			return nil, fmt.Errorf("unkown Datatype of name %d", c.Name)
 		}
@@ -322,12 +326,12 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 	}
 	var serializer ComponentParser
 	if datacomp_type != 0 { // if we have a datacomp, use that, else use the component serializer
-		serializer, _ = g_ecs_data.DataComponentParsers[datacomp_type]
+		serializer, _ = mgr.Maps.DataComponentParsers[datacomp_type]
 	} else {
-		serializer, _ = g_ecs_data.ComponentParsers[comp_type]
+		serializer, _ = mgr.Maps.ComponentParsers[comp_type]
 	}
 	if serializer == nil {
-		return nil, fmt.Errorf("serializer not found for datacomponent %s<%d>", g_ecs_data.comps.DataComponents[uint32(datacomp_type)].Name, comp_type)
+		return nil, fmt.Errorf("serializer not found for datacomponent %s<%d>", mgr.Maps.DataComponents[uint32(datacomp_type)].Name, comp_type)
 	}
 	raw, err := serializer.Parse(r, mgr)
 	if err != nil {

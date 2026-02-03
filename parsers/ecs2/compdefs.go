@@ -13,32 +13,24 @@ type DataComponentDef struct {
 }
 
 type ComponentHashMaps struct {
-	ComponentNames map[uint32]string           `json:"components"`
-	DataComponents map[uint32]DataComponentDef `json:"dataComponents"`
-}
-
-type GlobalECSData struct {
-	comps                *ComponentHashMaps
+	ComponentNames       map[uint32]string           `json:"components"`
+	DataComponents       map[uint32]DataComponentDef `json:"dataComponents"`
 	DataComponentParsers map[DataComponentHash]ComponentParser
 	ComponentParsers     map[ComponentHash]ComponentParser // this is needed as ecs::Array parser needs to parse a component with only type hash
 }
 
-func (g *GlobalECSData) GetDataCompName(hash DataComponentHash) (string, bool) {
-	str, good := g.comps.DataComponents[uint32(hash)]
+func (chm *ComponentHashMaps) GetDataCompName(hash DataComponentHash) (string, bool) {
+	str, good := chm.DataComponents[uint32(hash)]
 	if !good {
 		return "", good
 	}
 	return str.Name, good
 }
 
-func (g *GlobalECSData) GetCompName(hash ComponentHash) (string, bool) {
-	str, good := g.comps.ComponentNames[uint32(hash)]
+func (chm *ComponentHashMaps) GetCompName(hash ComponentHash) (string, bool) {
+	str, good := chm.ComponentNames[uint32(hash)]
 	return str, good
 }
-
-var (
-	g_ecs_data GlobalECSData
-)
 
 func ReadComponentHashMaps(r io.Reader) (ret *ComponentHashMaps, err error) {
 	type DataComponentDefStringed struct {
@@ -81,8 +73,7 @@ func ReadComponentHashMaps(r io.Reader) (ret *ComponentHashMaps, err error) {
 			CustomLoader:  v.CustomLoader,
 		}
 	}
-	g_ecs_data.comps = ret
-	err = g_ecs_data.initialize_parsers()
+	err = ret.InitializeParsers()
 	if err != nil {
 		return nil, err
 	}

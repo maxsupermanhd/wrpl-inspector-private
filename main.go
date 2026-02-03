@@ -47,7 +47,7 @@ func main() {
 }
 
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
-	ecs := ecs2.NewPacketECSParser()
+	ecs := ecs2.NewPacketECSParser(*chms)
 	slot := &packetslot.PacketSlotParser{KeepMessages: true}
 	kills := &kills2.PacketKillParser{
 		KeepKills: true,
