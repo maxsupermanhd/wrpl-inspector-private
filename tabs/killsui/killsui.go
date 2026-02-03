@@ -34,62 +34,86 @@ func (tab *KillsTab) Init() {
 }
 
 func (tab KillsTab) Run() {
-	imgui.TextUnformatted(fmt.Sprintf("Kills: %d, ECS entities: %d", len(tab.kills.Kills), len(tab.ecs.Uid_lookup)))
-	flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
-	if imgui.BeginTableV("kills", 12, flags, imgui.Vec2{}, 0) {
-		imgui.TableSetupColumn("n")
-		imgui.TableSetupColumn("seq")
-		imgui.TableSetupColumn("time")
-		imgui.TableSetupColumn("KillerPid")
-		imgui.TableSetupColumn("KillerUid")
-		imgui.TableSetupColumn("KillerVehicle")
-		imgui.TableSetupColumn("KillerWeapon")
-		imgui.TableSetupColumn("VictimPid")
-		imgui.TableSetupColumn("VictimUid")
-		imgui.TableSetupColumn("DestroyedWeapon")
-		imgui.TableSetupColumn("VehicleFromKillerUid")
-		imgui.TableSetupColumn("VehicleFromVictimUid")
+	if len(tab.kills.Kills) == 0 {
+		imgui.TextUnformatted(fmt.Sprintf("Kills: %d, ECS entities: %d", len(tab.kills.Kills), len(tab.ecs.Uid_lookup)))
+		return
+	}
+	if imgui.BeginChildStr("kills content") {
+		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
+		if imgui.BeginTableV("kills", 9, flags, imgui.Vec2{}, 0) {
+			imgui.TableSetupColumn("n")
+			imgui.TableSetupColumn("seq")
+			imgui.TableSetupColumn("time")
+			imgui.TableSetupColumn("killer")
+			imgui.TableSetupColumn("vehicle")
+			imgui.TableSetupColumn("weapon")
+			imgui.TableSetupColumn("victim")
+			imgui.TableSetupColumn("vehicle")
+			imgui.TableSetupColumn("munition")
 
-		imgui.TableHeadersRow()
-		for i, v := range tab.kills.Kills {
-			imgui.TableNextRow()
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(strconv.FormatInt(int64(v.Seq), 10))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted((time.Duration(v.CurrentTime) * time.Millisecond).String())
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.KillerPid))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.KillerUid))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.PlayerVehicle))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.PlayerWeapon))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.VictimPid))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.VictimUid))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(fmt.Sprint(v.DestroyedWeapon))
-			imgui.TableNextColumn()
+			imgui.TableHeadersRow()
+			for i, v := range tab.kills.Kills {
+				imgui.TableNextRow()
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
+				imgui.TableNextColumn()
+				imgui.TextUnformatted(strconv.FormatInt(int64(v.Seq), 10))
+				imgui.TableNextColumn()
+				imgui.TextUnformatted((time.Duration(v.CurrentTime) * time.Millisecond).String())
+				imgui.TableNextColumn()
 
-			if v.ResolvedKiller == nil {
-				imgui.TextUnformatted("!!unresolved killer!!")
-			} else {
-				name, _ := ecs2.GetObjectData[string](&v.ResolvedKiller.Data, "unit__className")
-				imgui.TextUnformatted(fmt.Sprint(name))
+				if v.ResolvedKiller == nil {
+					// imgui.PushStyleColorU32(imgui.ColText, 0x66666666)
+					// imgui.TextUnformatted("!!unresolved killer!!")
+					// imgui.PopStyleColor()
+					imgui.TableNextColumn()
+					imgui.TableNextColumn()
+				} else {
+					playerid, _ := ecs2.GetObjectData[int32](&v.ResolvedKiller.Data, "unit__playerId")
+					if playerid < 0 || playerid >= int32(len(tab.players.Players)) {
+						imgui.TextUnformatted(fmt.Sprintf("oob unit__playerId??? %d", playerid))
+					} else {
+						p := tab.players.Players[playerid]
+						if p == nil {
+							imgui.TextUnformatted(fmt.Sprintf("nil player %d", playerid))
+						} else {
+							imgui.TextUnformatted(p.Name)
+						}
+					}
+					imgui.TableNextColumn()
+					name, _ := ecs2.GetObjectData[string](&v.ResolvedKiller.Data, "unit__className")
+					imgui.TextUnformatted(name)
+					imgui.TableNextColumn()
+				}
+
+				imgui.TextUnformatted(fmt.Sprint(v.PlayerWeapon))
+				imgui.TableNextColumn()
+
+				if v.ResolvedVictim == nil {
+					imgui.TableNextColumn()
+					imgui.TableNextColumn()
+				} else {
+					playerid, _ := ecs2.GetObjectData[int32](&v.ResolvedVictim.Data, "unit__playerId")
+					if playerid < 0 || playerid >= int32(len(tab.players.Players)) {
+						imgui.TextUnformatted(fmt.Sprintf("oob unit__playerId??? %d", playerid))
+					} else {
+						p := tab.players.Players[playerid]
+						if p == nil {
+							imgui.TextUnformatted(fmt.Sprintf("nil player %d", playerid))
+						} else {
+							imgui.TextUnformatted(p.Name)
+						}
+					}
+					imgui.TableNextColumn()
+					name, _ := ecs2.GetObjectData[string](&v.ResolvedVictim.Data, "unit__className")
+					imgui.TextUnformatted(name)
+					imgui.TableNextColumn()
+				}
+
+				imgui.TextUnformatted(fmt.Sprint(v.DestroyedWeapon))
 			}
-			imgui.TableNextColumn()
-
-			if v.ResolvedVictim == nil {
-				imgui.TextUnformatted("!!unresolved victim!!")
-			} else {
-				name, _ := ecs2.GetObjectData[string](&v.ResolvedVictim.Data, "unit__className")
-				imgui.TextUnformatted(fmt.Sprint(name))
-			}
+			imgui.EndTable()
 		}
-		imgui.EndTable()
+		imgui.EndChild()
 	}
 }
