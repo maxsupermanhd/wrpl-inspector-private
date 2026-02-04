@@ -114,6 +114,6 @@ func (tab KillsTab) Run() {
 			}
 			imgui.EndTable()
 		}
-		imgui.EndChild()
 	}
+	imgui.EndChild()
 }

@@ -51,29 +51,29 @@ func (tab *ECSUI) Run() {
 		if imgui.BeginTabItem("Components") {
 			if imgui.BeginChildStr("components content") {
 				tab.RunTabComponents()
-				imgui.EndChild()
 			}
+			imgui.EndChild()
 			imgui.EndTabItem()
 		}
 		if imgui.BeginTabItem("Templates") {
 			if imgui.BeginChildStr("templates content") {
 				tab.RunTabTemplates()
-				imgui.EndChild()
 			}
+			imgui.EndChild()
 			imgui.EndTabItem()
 		}
 		if imgui.BeginTabItem("Entities (by EntityId)") {
 			if imgui.BeginChildStr("entities index content") {
 				tab.RunTabEntities()
-				imgui.EndChild()
 			}
+			imgui.EndChild()
 			imgui.EndTabItem()
 		}
 		if imgui.BeginTabItem("Entities (by UID)") {
 			if imgui.BeginChildStr("entities eid content") {
 				tab.RunTabEntitiesUidLookup()
-				imgui.EndChild()
 			}
+			imgui.EndChild()
 			imgui.EndTabItem()
 		}
 		imgui.EndTabBar()

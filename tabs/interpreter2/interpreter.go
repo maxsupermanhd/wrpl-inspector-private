@@ -139,9 +139,8 @@ func (be *ByteInterpreterTab) Run() {
 				clipper.End()
 				imgui.EndTable()
 			}
-
-			imgui.EndChild()
 		}
+		imgui.EndChild()
 	}
 }
 

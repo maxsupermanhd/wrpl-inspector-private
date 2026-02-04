@@ -21,6 +21,12 @@ github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.1 h1:f4Y6/a1P3QdX/xWHAK+ixOcGaZz
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.1/go.mod h1:pxvJ5FTPMbXQtqjQZ1i2RJpHn6GRxjQSwxLMqMruT9E=
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.2 h1:mOYW7W2U7Px+hDmBBrDOWlwLxLJ/JbCMe2o+xL35EtA=
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.2/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.3 h1:MaaDPRnTarPuU55T6rOWympZGgdj2YWQQ9RsyJ3uQbY=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.3/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.4 h1:WK5FtCwlWgUZ4NqmAz26ox6TcBDcNJWbSHkBNLu9lp4=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.4/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.5 h1:LzJZMYo01sKrM+4sjPCjLux7KdzgbW3AJkHCbFGRozM=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.5/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
 github.com/pierrec/lz4/v4 v4.1.25 h1:kocOqRffaIbU5djlIBr7Wh+cx82C0vtFb0fOurZHqD0=
 github.com/pierrec/lz4/v4 v4.1.25/go.mod h1:EoQMVJgeeEOMsCqCzqFm2O0cJvljX2nGZjcRIPL34O4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

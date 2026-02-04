@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
+	"main/parsers/paths"
 	"main/parsers/stub0"
 	"main/parsers/stub1"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
 	"main/tabs/killsui"
+	"main/tabs/mapview"
 	"main/tabs/resultsui"
-	"main/tabs/valuesearch"
 	"os"
 
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
@@ -31,12 +32,13 @@ import (
 
 var (
 	chms *ecs2.ComponentHashMaps
+	ui   *inspector.UI
 )
 
 // ^0f8bfe0e090001(........)
 func main() {
 	chms = noerr(ecs2.ReadComponentHashMaps(bytes.NewReader(noerr(os.ReadFile("ecshashes.json")))))
-	ui := &inspector.UI{
+	ui = &inspector.UI{
 		InitFont:        noerr(os.ReadFile("HackNerdFontMono-Regular.ttf")),
 		ProcessReplayFn: replayProcessor,
 		InitWindowFlags: map[glfwbackend.GLFWWindowFlags]int{
@@ -53,22 +55,21 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		KeepKills: true,
 		ECS:       &ecs.Mgr,
 	}
+	paths := paths.NewPositionRetainerParser()
 	parsers := []packet.PacketParser{
+		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
-		kills,
 		&packetmovement.PacketMovementParser{},
 		&stub0.PacketStubParser{},
 		&stub1.PacketStubParser{},
-		ecs,
-		slot,
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot}
 	tabs := []inspector.Tab{}
 	tabs = append(tabs, basictabs.NewBasicSummaryTab(rpl))
 	tabs = append(tabs, basictabs.NewBasicTextTab("Header", spew.Sdump(rpl.Header)))
 	tabs = append(tabs, genBlkJSONTab("Settings raw", rpl.Settings))
-	tabs = append(tabs, genBlkJSONTab("Results raw", rpl.Results))
+	// tabs = append(tabs, genBlkJSONTab("Results raw", rpl.Results))
 	tabs = append(tabs, noerr(resultsui.NewResultsTab(rpl.Results)))
 	tabs = append(tabs, packetui.NewPacketsTab(rpl, streams...))
 	hashTypes := chms.ComponentNames
@@ -79,9 +80,19 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, ecsui2.NewECSUI(rpl, ecs, hashNames, hashTypes))
 	tabs = append(tabs, interpreter2.NewByteInterpreterTab(rpl, streams...))
 	tabs = append(tabs, bitshiftui.NewBitShiftUI())
-	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
+	// tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
 	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot))
+	tabs = append(tabs, &mapview.MapViewTab{
+		Backend:      ui.ImBackend,
+		Rpl:          rpl,
+		Kills:        kills,
+		Ecs:          &ecs.Mgr,
+		Players:      slot,
+		Paths:        paths,
+		TankMapsPath: "data/tankmaps",
+		DataminePath: "../War-Thunder-Datamine/",
+	})
 	return parsers, tabs
 }
 
