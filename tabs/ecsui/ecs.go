@@ -86,26 +86,28 @@ func (tab *ECSUI) RunTabEntities() {
 		if !strings.Contains(ent.Template, tab.templateFilter) {
 			continue
 		}
-		imgui.TextUnformatted(fmt.Sprintf("Entity %v %q", entIdx, ent.Template))
-		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
-		if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
-			imgui.TableSetupColumn("n")
-			imgui.TableSetupColumn("name")
-			imgui.TableSetupColumn("type hash")
-			imgui.TableSetupColumn("value")
-			imgui.TableHeadersRow()
-			for i, k := range ent.Data.Components {
-				imgui.TableNextRow()
-				imgui.TableNextColumn()
-				imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
-				imgui.TableNextColumn()
-				imgui.TextUnformatted(k.Name)
-				imgui.TableNextColumn()
-				imgui.TextUnformatted(fmt.Sprintf("0x%08X", k.Comp.Type))
-				imgui.TableNextColumn()
-				imgui.TextUnformatted(spew.Sdump(k.Comp.Value))
+		if imgui.TreeNodeStr(fmt.Sprintf("Entity %v 0x%08X %q", entIdx, entIdx, ent.Template)) {
+			flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
+			if imgui.BeginTableV("compdefs", 4, flags, imgui.Vec2{}, 0) {
+				imgui.TableSetupColumn("n")
+				imgui.TableSetupColumn("name")
+				imgui.TableSetupColumn("type hash")
+				imgui.TableSetupColumn("value")
+				imgui.TableHeadersRow()
+				for i, k := range ent.Data.Components {
+					imgui.TableNextRow()
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(strconv.FormatInt(int64(i), 10))
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(k.Name)
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(fmt.Sprintf("0x%08X", k.Comp.Type))
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(spew.Sdump(k.Comp.Value))
+				}
+				imgui.EndTable()
 			}
-			imgui.EndTable()
+			imgui.TreePop()
 		}
 	}
 }
