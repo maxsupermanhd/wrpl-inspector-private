@@ -12,6 +12,7 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/AllenDang/cimgui-go/backend"
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
@@ -125,9 +126,11 @@ func (tab *MapViewTab) Run() {
 }
 
 func (tab *MapViewTab) RunContent() {
+	padY := imgui.CurrentStyle().FramePadding().Y
 	avail := imgui.ContentRegionAvail()
-	tab.imOutSize = imgui.Vec2{X: min(avail.X, avail.Y), Y: min(avail.X, avail.Y)}
+	tab.imOutSize = imgui.Vec2{X: min(avail.X, avail.Y), Y: min(avail.X, avail.Y) - padY}
 	tab.imOutSp = imgui.CursorScreenPos()
+	tab.imOutSp.Y += padY
 	if tab.initErr != nil {
 		imgui.PushTextWrapPos()
 		imgui.TextUnformatted("init error: " + tab.initErr.Error())
@@ -217,35 +220,61 @@ func (tab *MapViewTab) runGeneral() {
 
 func (tab *MapViewTab) runPaths() {
 	flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
-	if imgui.BeginTableV("paths", 6, flags, imgui.Vec2{}, 0) {
-		imgui.TableSetupColumn("eid dec")
-		imgui.TableSetupColumn("eid hex")
-		imgui.TableSetupColumn("eid2 dec")
-		imgui.TableSetupColumn("eid2 hex")
-		imgui.TableSetupColumn("samples")
+	if imgui.BeginTableV("paths", 7, flags, imgui.Vec2{}, 0) {
+		imgui.TableSetupColumn("eid")
+		imgui.TableSetupColumn("count")
+		imgui.TableSetupColumn("Tfirst")
+		imgui.TableSetupColumn("Tlast")
 		imgui.TableSetupColumn("player")
+		imgui.TableSetupColumn("model")
+		imgui.TableSetupColumn("died")
 		imgui.TableHeadersRow()
-		for _, eid := range slices.Sorted(maps.Keys(tab.Paths.Paths)) {
-			path := tab.Paths.Paths[eid]
-			// eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
-			// eid2 := eid & 0x7FF
-			eid2 := eid >> 8
+		type pair struct {
+			k uint64
+			v uint32
+		}
+		sortPairs := []pair{}
+		for k, v := range tab.Paths.Paths {
+			if len(v) == 0 {
+				continue
+			}
+			sortPairs = append(sortPairs, pair{
+				k: k,
+				v: v[0].Time,
+			})
+		}
+		slices.SortFunc(sortPairs, func(a, b pair) int {
+			r := int(a.v) - int(b.v)
+			if r != 0 {
+				return r
+			}
+			return int(a.k) - int(b.k)
+		})
+		for _, sortedPair := range sortPairs {
+			eid := sortedPair.k
+			path := tab.Paths.Paths[sortedPair.k]
+			eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
+			eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
+
 			imgui.TableNextRow()
 			if tab.highlightPath == eid {
 				imgui.TableSetBgColor(imgui.TableBgTargetRowBg1, 0x22FFFFFF)
 			}
+
 			imgui.TableNextColumn()
 			if imgui.Button(strconv.FormatUint(eid, 10)) {
 				tab.highlightPath = eid
 			}
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(strconv.FormatUint(eid, 16))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(strconv.FormatUint(eid2, 10))
-			imgui.TableNextColumn()
-			imgui.TextUnformatted(strconv.FormatUint(eid2, 16))
+
 			imgui.TableNextColumn()
 			imgui.TextUnformatted(strconv.FormatInt(int64(len(path)), 10))
+
+			imgui.TableNextColumn()
+			imgui.TextUnformatted((time.Duration(path[0].Time) * time.Millisecond).String())
+
+			imgui.TableNextColumn()
+			imgui.TextUnformatted((time.Duration(path[len(path)-1].Time) * time.Millisecond).String())
+
 			imgui.TableNextColumn()
 			e := tab.Ecs.Entities[uint32(eid2)]
 			if e == nil {
@@ -267,6 +296,28 @@ func (tab *MapViewTab) runPaths() {
 				continue
 			}
 			imgui.TextUnformatted(player.Name)
+
+			imgui.TableNextColumn()
+			modelName, ok := ecs2.GetObjectData[string](&e.Data, "unit__className")
+			if !ok {
+				imgui.TextUnformatted("unresolved unit__className")
+				continue
+			}
+			imgui.TextUnformatted(modelName)
+
+			imgui.TableNextColumn()
+			uid, ok := ecs2.GetObjectData[int32](&e.Data, "uid")
+			if !ok {
+				imgui.TextUnformatted("unresolved uid")
+			}
+			killedAt := uint32(0)
+			for _, kill := range tab.Kills.Kills {
+				if kill.VictimUid == uint16(uid) {
+					killedAt = kill.CurrentTime
+					break
+				}
+			}
+			imgui.TextUnformatted((time.Duration(killedAt) * time.Millisecond).String())
 		}
 	}
 	imgui.EndTable()
