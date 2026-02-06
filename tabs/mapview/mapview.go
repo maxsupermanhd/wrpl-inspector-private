@@ -50,7 +50,9 @@ type MapViewTab struct {
 	rCoordScaleX    float64
 	rCoordScaleZ    float64
 
-	highlightPath uint64
+	highlightPath     uint64
+	hoveredPath       uint64
+	hoveredPathRender bool
 
 	imOutSize imgui.Vec2
 	imOutSp   imgui.Vec2
@@ -126,6 +128,7 @@ func (tab *MapViewTab) Run() {
 }
 
 func (tab *MapViewTab) RunContent() {
+	tab.RunControls()
 	padY := imgui.CurrentStyle().FramePadding().Y
 	avail := imgui.ContentRegionAvail()
 	tab.imOutSize = imgui.Vec2{X: min(avail.X, avail.Y), Y: min(avail.X, avail.Y) - padY}
@@ -168,6 +171,9 @@ func (tab *MapViewTab) RunContent() {
 	imgui.EndChild()
 }
 
+func (tab *MapViewTab) RunControls() {
+}
+
 func (tab *MapViewTab) DrawView() {
 	dl := imgui.WindowDrawList()
 
@@ -177,18 +183,49 @@ func (tab *MapViewTab) DrawView() {
 
 	sw := float64(tab.imOutSize.X / float32(tab.rImageArea.Dx()))
 	sh := float64(tab.imOutSize.Y / float32(tab.rImageArea.Dy()))
-	for _, eid := range slices.Sorted(maps.Keys(tab.Paths.Paths)) {
+	pathsSorted := slices.Sorted(maps.Keys(tab.Paths.Paths))
+	for _, eid := range pathsSorted {
 		path := tab.Paths.Paths[eid]
-		if eid == tab.highlightPath {
+		eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
+		eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
+		e := tab.Ecs.Entities[uint32(eid2)]
+		if e == nil {
 			continue
 		}
-		for _, pos := range path {
-			x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
-			z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
-			coords := imgui.Vec2{X: float32(x), Y: float32(z)}
-			dl.PathLineTo(tab.imOutSp.Add(coords))
+		foundKill := -1
+		for i := range tab.Kills.Kills {
+			if tab.Kills.Kills[i].ResolvedVictim != e {
+				continue
+			}
+			foundKill = i
+			break
 		}
-		dl.PathStroke(0xFFFFFFFF)
+		if foundKill != -1 {
+			killDrawn := false
+			for _, pos := range path {
+				x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+				z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+				coords := tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
+				dl.PathLineTo(coords)
+				if pos.Time >= tab.Kills.Kills[foundKill].CurrentTime {
+					killDrawn = true
+					dl.PathStroke(0xFFFFFFFF)
+					dl.AddCircleFilled(coords, 6, 0xFF0000FF)
+					break
+				}
+			}
+			if !killDrawn {
+				dl.PathStroke(0xFFFFFFFF)
+			}
+		} else {
+			for _, pos := range path {
+				x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+				z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+				coords := imgui.Vec2{X: float32(x), Y: float32(z)}
+				dl.PathLineTo(tab.imOutSp.Add(coords))
+			}
+			dl.PathStroke(0xFFFFFFFF)
+		}
 	}
 	hpath := tab.Paths.Paths[tab.highlightPath]
 	if hpath != nil {
@@ -198,7 +235,17 @@ func (tab *MapViewTab) DrawView() {
 			coords := imgui.Vec2{X: float32(x), Y: float32(z)}
 			dl.PathLineTo(tab.imOutSp.Add(coords))
 		}
-		dl.PathStrokeV(0xFF0000FF, 0, 3)
+		dl.PathStrokeV(0xAA0000FF, 0, 3)
+	}
+	hpath = tab.Paths.Paths[tab.hoveredPath]
+	if hpath != nil && tab.hoveredPathRender {
+		for _, pos := range hpath {
+			x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+			z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+			coords := imgui.Vec2{X: float32(x), Y: float32(z)}
+			dl.PathLineTo(tab.imOutSp.Add(coords))
+		}
+		dl.PathStrokeV(0xAA0000FF, 0, 3)
 	}
 }
 
@@ -250,6 +297,7 @@ func (tab *MapViewTab) runPaths() {
 			}
 			return int(a.k) - int(b.k)
 		})
+		isAnythingHovered := false
 		for _, sortedPair := range sortPairs {
 			eid := sortedPair.k
 			path := tab.Paths.Paths[sortedPair.k]
@@ -257,13 +305,18 @@ func (tab *MapViewTab) runPaths() {
 			eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
 
 			imgui.TableNextRow()
-			if tab.highlightPath == eid {
+			isRowSelected := tab.highlightPath == eid
+			if isRowSelected {
 				imgui.TableSetBgColor(imgui.TableBgTargetRowBg1, 0x22FFFFFF)
 			}
 
 			imgui.TableNextColumn()
-			if imgui.Button(strconv.FormatUint(eid, 10)) {
+			if imgui.SelectableBoolV(strconv.FormatUint(eid, 10), isRowSelected, imgui.SelectableFlagsSpanAllColumns, imgui.Vec2{}) {
 				tab.highlightPath = eid
+			}
+			if imgui.IsItemHovered() {
+				isAnythingHovered = true
+				tab.hoveredPath = eid
 			}
 
 			imgui.TableNextColumn()
@@ -319,6 +372,7 @@ func (tab *MapViewTab) runPaths() {
 			}
 			imgui.TextUnformatted((time.Duration(killedAt) * time.Millisecond).String())
 		}
+		tab.hoveredPathRender = isAnythingHovered
 	}
 	imgui.EndTable()
 }
