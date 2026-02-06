@@ -12,6 +12,11 @@ type ResultsTab struct {
 }
 
 func NewResultsTab(resultsBlkBytes []byte) (*ResultsTab, error) {
+	if len(resultsBlkBytes) == 0 {
+		return &ResultsTab{
+			raw: map[string]any{},
+		}, nil
+	}
 	raw, err := wrpl.ParseBlk(resultsBlkBytes)
 	if err != nil {
 		return nil, err
