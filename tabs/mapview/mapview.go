@@ -56,6 +56,18 @@ type MapViewTab struct {
 
 	imOutSize imgui.Vec2
 	imOutSp   imgui.Vec2
+
+	pbCurrentTime     uint32
+	pbStartedRealTime time.Time
+	pbStartedGameTime uint32
+	pbIsPlaying       bool
+	pbPlaybackSpeed   float32
+	pbTrailDuration   uint32
+	pbButtonSize      float32
+
+	cacheLatestPlaybackTime  uint32
+	cacheLatestPlaybackIndex []int
+	cachePathEidsSorted      []uint64
 }
 
 func (tab *MapViewTab) Name() string {
@@ -118,6 +130,38 @@ func (tab *MapViewTab) Init() {
 
 	tab.rCoordScaleX = math.Abs(offsets.TankMapCoord1[0]-offsets.TankMapCoord0[0]) / 2048
 	tab.rCoordScaleZ = math.Abs(offsets.TankMapCoord1[1]-offsets.TankMapCoord0[1]) / 2048
+
+	tab.pbCurrentTime = tab.Rpl.Packets[0].CurrentTime
+	tab.pbPlaybackSpeed = 1
+	tab.pbTrailDuration = 30000
+	tab.pbButtonSize = max(imgui.CalcTextSize("pause").X, imgui.CalcTextSize("play").X) + 10
+
+	type pair struct {
+		k uint64
+		v uint32
+	}
+	sortPairs := []pair{}
+	for k, v := range tab.Paths.Paths {
+		if len(v) == 0 {
+			continue
+		}
+		sortPairs = append(sortPairs, pair{
+			k: k,
+			v: v[0].Time,
+		})
+	}
+	slices.SortFunc(sortPairs, func(a, b pair) int {
+		r := int(a.v) - int(b.v)
+		if r != 0 {
+			return r
+		}
+		return int(a.k) - int(b.k)
+	})
+	tab.cachePathEidsSorted = make([]uint64, len(sortPairs))
+	for i, v := range sortPairs {
+		tab.cachePathEidsSorted[i] = v.k
+	}
+	tab.cacheLatestPlaybackIndex = make([]int, len(sortPairs))
 }
 
 func (tab *MapViewTab) Run() {
@@ -149,12 +193,12 @@ func (tab *MapViewTab) RunContent() {
 	imgui.SameLine()
 	if imgui.BeginChildStr("map side view") {
 		if imgui.BeginTabBar("side tabs") {
-			if imgui.BeginTabItem("General") {
-				tab.runGeneral()
-				imgui.EndTabItem()
-			}
 			if imgui.BeginTabItem("Paths") {
 				tab.runPaths()
+				imgui.EndTabItem()
+			}
+			if imgui.BeginTabItem("Info") {
+				tab.runGeneral()
 				imgui.EndTabItem()
 			}
 			if imgui.BeginTabItem("Areas") {
@@ -172,6 +216,46 @@ func (tab *MapViewTab) RunContent() {
 }
 
 func (tab *MapViewTab) RunControls() {
+	replayTimeStart := tab.Rpl.Packets[0].CurrentTime
+	replayTimeEnd := tab.Rpl.Packets[len(tab.Rpl.Packets)-1].CurrentTime
+	imgui.AlignTextToFramePadding()
+	imgui.TextUnformatted(fmt.Sprint((time.Duration(tab.pbCurrentTime) * time.Millisecond).String()))
+	imgui.SameLineV(90, -1)
+	if tab.pbIsPlaying {
+		if imgui.ButtonV("pause", imgui.Vec2{X: tab.pbButtonSize, Y: 0}) {
+			tab.pbIsPlaying = false
+		}
+	} else {
+		if imgui.ButtonV("play", imgui.Vec2{X: tab.pbButtonSize, Y: 0}) {
+			tab.pbIsPlaying = true
+			tab.pbStartedRealTime = time.Now()
+			tab.pbStartedGameTime = tab.pbCurrentTime
+		}
+	}
+	if tab.pbIsPlaying {
+		tab.pbCurrentTime = tab.pbStartedGameTime + uint32(float32(time.Since(tab.pbStartedRealTime).Milliseconds())*tab.pbPlaybackSpeed)
+		if tab.pbCurrentTime >= replayTimeEnd {
+			tab.pbIsPlaying = false
+			tab.pbCurrentTime = replayTimeEnd
+		}
+	}
+	p := float32(uint32(tab.pbCurrentTime)-replayTimeStart) / float32(replayTimeEnd-replayTimeStart)
+	if tab.pbCurrentTime < replayTimeStart {
+		p = 0
+	}
+	imgui.SameLine()
+	imgui.SetNextItemWidth(imgui.ContentRegionAvail().X - 200)
+	if imgui.SliderFloat("##timeslider", &p, 0, 1) {
+		tab.pbCurrentTime = replayTimeStart + uint32(p*float32(replayTimeEnd-replayTimeStart))
+		tab.pbStartedRealTime = time.Now()
+		tab.pbStartedGameTime = tab.pbCurrentTime
+	}
+	imgui.SameLine()
+	imgui.SetNextItemWidth(imgui.ContentRegionAvail().X)
+	if imgui.SliderFloat("##speed", &tab.pbPlaybackSpeed, 0, 16) {
+		tab.pbStartedRealTime = time.Now()
+		tab.pbStartedGameTime = tab.pbCurrentTime
+	}
 }
 
 func (tab *MapViewTab) DrawView() {
@@ -183,8 +267,8 @@ func (tab *MapViewTab) DrawView() {
 
 	sw := float64(tab.imOutSize.X / float32(tab.rImageArea.Dx()))
 	sh := float64(tab.imOutSize.Y / float32(tab.rImageArea.Dy()))
-	pathsSorted := slices.Sorted(maps.Keys(tab.Paths.Paths))
-	for _, eid := range pathsSorted {
+	showEverything := tab.pbCurrentTime <= tab.Rpl.Packets[0].CurrentTime
+	for _, eid := range tab.cachePathEidsSorted {
 		path := tab.Paths.Paths[eid]
 		eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
 		eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
@@ -200,32 +284,106 @@ func (tab *MapViewTab) DrawView() {
 			foundKill = i
 			break
 		}
-		if foundKill != -1 {
-			killDrawn := false
+		if showEverything {
+			coords := imgui.Vec2{}
+			killCoords := imgui.Vec2{}
+			killCoordsSet := false
 			for _, pos := range path {
 				x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
 				z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
-				coords := tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
-				dl.PathLineTo(coords)
-				if pos.Time >= tab.Kills.Kills[foundKill].CurrentTime {
-					killDrawn = true
-					dl.PathStroke(0xFFFFFFFF)
-					dl.AddCircleFilled(coords, 6, 0xFF0000FF)
-					break
+				coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
+				dl.PathLineToMergeDuplicate(coords)
+				if foundKill != -1 && pos.Time >= tab.Kills.Kills[foundKill].CurrentTime && !killCoordsSet {
+					killCoords = coords
+					killCoordsSet = true
 				}
 			}
-			if !killDrawn {
-				dl.PathStroke(0xFFFFFFFF)
-			}
-		} else {
-			for _, pos := range path {
-				x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
-				z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
-				coords := imgui.Vec2{X: float32(x), Y: float32(z)}
-				dl.PathLineTo(tab.imOutSp.Add(coords))
-			}
 			dl.PathStroke(0xFFFFFFFF)
+			dl.AddCircleFilled(coords, 3, 0xFF00FF00)
+			if killCoordsSet {
+				dl.AddCircleFilled(killCoords, 6, 0xFF0000FF)
+			}
+			continue
 		}
+		if path[0].Time > tab.pbCurrentTime {
+			continue
+		}
+		if path[len(path)-1].Time+tab.pbTrailDuration <= tab.pbCurrentTime {
+			continue
+		}
+		if foundKill != -1 && tab.Kills.Kills[foundKill].CurrentTime+tab.pbTrailDuration <= tab.pbCurrentTime {
+			continue
+		}
+		coords := imgui.Vec2{}
+		killCoords := imgui.Vec2{}
+		killCoordsSet := false
+		for _, pos := range path {
+			if pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration {
+				continue
+			}
+			x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+			z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+			coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
+			dl.PathLineToMergeDuplicate(coords)
+			if foundKill != -1 && pos.Time >= tab.Kills.Kills[foundKill].CurrentTime && !killCoordsSet {
+				killCoords = coords
+				killCoordsSet = true
+			}
+		}
+		dl.PathStroke(0xFFFFFFFF)
+		if killCoordsSet {
+			a := uint32(255-255*float32(tab.pbCurrentTime-tab.Kills.Kills[foundKill].CurrentTime)/float32(tab.pbTrailDuration)) << 24
+			dl.AddCircleFilled(killCoords, 6, 0x000000FF|a)
+		} else {
+			dl.AddCircleFilled(coords, 3, 0xFF00FF00)
+		}
+		// if foundKill != -1 {
+		// 	killDrawn := false
+		// 	coords := imgui.Vec2{}
+		// 	drawnAnything := false
+		// 	for _, pos := range path {
+		// 		if !showEverything && (pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration) {
+		// 			continue
+		// 		}
+		// 		drawnAnything = true
+		// 		x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+		// 		z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+		// 		coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
+		// 		dl.PathLineToMergeDuplicate(coords)
+		// 		// && (showEverything || tab.Kills.Kills[foundKill].CurrentTime >= tab.pbCurrentTime-tab.pbTrailDuration)
+		// 		if pos.Time >= tab.Kills.Kills[foundKill].CurrentTime {
+		// 			a := uint32(0xFF000000)
+		// 			if !showEverything {
+		// 				a = uint32(255*float32(pos.Time-tab.Kills.Kills[foundKill].CurrentTime)/float32(tab.pbTrailDuration)) << 24
+		// 			}
+		// 			killDrawn = true
+		// 			dl.PathStroke(0xFFFFFFFF)
+		// 			dl.AddCircleFilled(coords, 6, 0x000000FF|a)
+		// 			break
+		// 		}
+		// 	}
+		// 	if !killDrawn && drawnAnything {
+		// 		dl.PathStroke(0xFFFFFFFF)
+		// 		dl.AddCircleFilled(coords, 3, 0xFF00FF00)
+		// 	}
+		// } else {
+		// 	coords := imgui.Vec2{}
+		// 	drawnAnything := false
+		// 	for _, pos := range path {
+		// 		if !showEverything && (pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration) {
+		// 			continue
+		// 		}
+		// 		drawnAnything = true
+		// 		x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+		// 		z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+		// 		coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
+		// 		dl.PathLineToMergeDuplicate(coords)
+		// 	}
+		// 	if drawnAnything {
+		// 		dl.PathStroke(0xFFFFFFFF)
+		// 		dl.AddCircleFilled(coords, 3, 0xFF00FF00)
+		// 	}
+		// }
 	}
 	hpath := tab.Paths.Paths[tab.highlightPath]
 	if hpath != nil {
@@ -250,6 +408,10 @@ func (tab *MapViewTab) DrawView() {
 }
 
 func (tab *MapViewTab) runGeneral() {
+	imgui.TextUnformatted(fmt.Sprint("Playback: ", tab.pbIsPlaying))
+	imgui.TextUnformatted(fmt.Sprint("Playback current time: ", tab.pbCurrentTime))
+	imgui.TextUnformatted(fmt.Sprint("Playback started real time: ", tab.pbStartedRealTime))
+	imgui.TextUnformatted(fmt.Sprint("Playback started game time: ", tab.pbStartedGameTime))
 	imgui.TextUnformatted("Level: " + tab.rLevel)
 	imgui.TextUnformatted("Level settings: " + tab.rLevelSettings)
 	imgui.TextUnformatted("Battle type: " + tab.rBattleType)
@@ -280,27 +442,9 @@ func (tab *MapViewTab) runPaths() {
 			k uint64
 			v uint32
 		}
-		sortPairs := []pair{}
-		for k, v := range tab.Paths.Paths {
-			if len(v) == 0 {
-				continue
-			}
-			sortPairs = append(sortPairs, pair{
-				k: k,
-				v: v[0].Time,
-			})
-		}
-		slices.SortFunc(sortPairs, func(a, b pair) int {
-			r := int(a.v) - int(b.v)
-			if r != 0 {
-				return r
-			}
-			return int(a.k) - int(b.k)
-		})
 		isAnythingHovered := false
-		for _, sortedPair := range sortPairs {
-			eid := sortedPair.k
-			path := tab.Paths.Paths[sortedPair.k]
+		for _, eid := range tab.cachePathEidsSorted {
+			path := tab.Paths.Paths[eid]
 			eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
 			eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
 
