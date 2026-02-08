@@ -140,7 +140,9 @@ func (be *ByteInterpreterTab) Run() {
 				imgui.EndTable()
 			}
 		}
-		imgui.EndChild()
+		if be.showTable {
+			imgui.EndChild()
+		}
 	}
 }
 
