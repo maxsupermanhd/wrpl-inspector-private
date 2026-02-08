@@ -369,12 +369,28 @@ func (tab *MapViewTab) DrawView() {
 					continue
 				}
 				// ^ff0f81f60ccc
-				dl.AddLine(coords, coords.Add(imgui.Vec2{
-					// X: float32(math.Cos(float64(stubVals[i].F[tab.stubIdx]))) * 15,
-					X: float32(stubVals[i].F[4]) * 2,
-					// Y: float32(math.Sin(float64(stubVals[i].F[tab.stubIdx]))) * 15,
-					Y: float32(stubVals[i].F[6]) * 2,
-				}), 0xFFFF0000)
+				switch stubVals[i].Rest[0] {
+				case 0x18:
+					dl.AddLine(coords, coords.Add(imgui.Vec2{
+						X: -float32(stubVals[i].F[4]) * 2,
+						Y: float32(stubVals[i].F[6]) * 2,
+					}), 0xFFFF0000)
+					dl.AddLine(coords, coords.Add(imgui.Vec2{
+						X: -float32(stubVals[i].F[4]) * 2 * 10,
+						Y: float32(stubVals[i].F[6]) * 2 * 10,
+					}), 0x55FF0000)
+				case 0x21:
+					dl.AddLine(coords, coords.Add(imgui.Vec2{
+						X: float32(stubVals[i].F[7]) * 2 * 8,
+						Y: -float32(stubVals[i].F[9]) * 2 * 8,
+					}), 0xFFFF0000)
+					dl.AddLine(coords, coords.Add(imgui.Vec2{
+						X: float32(stubVals[i].F[7]) * 2 * 8 * 10,
+						Y: -float32(stubVals[i].F[9]) * 2 * 8 * 10,
+					}), 0x55FF0000)
+				default:
+					dl.AddTextVec2(coords, 0xFFFF0000, strconv.Itoa(int(stubVals[i].Rest[0])))
+				}
 				break
 			}
 		}
