@@ -8,6 +8,7 @@ import (
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
 	"main/parsers/paths"
+	"main/parsers/stub0"
 	"maps"
 	"math"
 	"slices"
@@ -30,6 +31,7 @@ type MapViewTab struct {
 	Ecs     *ecs2.EntityManager
 	Players *packetslot.PacketSlotParser
 	Paths   *paths.PositionRetainerParser
+	Stub0   *stub0.PacketStubParser
 
 	TankMapsPath string
 	DataminePath string
@@ -53,6 +55,9 @@ type MapViewTab struct {
 	highlightPath     uint64
 	hoveredPath       uint64
 	hoveredPathRender bool
+
+	stubNotFound int
+	stubIdx      int32
 
 	imOutSize imgui.Vec2
 	imOutSp   imgui.Vec2
@@ -355,12 +360,30 @@ func (tab *MapViewTab) DrawView() {
 			}
 		}
 		dl.PathStroke(0xFFFFFFFF)
+		stubVals := tab.Stub0.Data[eid]
+		if stubVals == nil {
+			tab.stubNotFound++
+		} else {
+			for i := range stubVals {
+				if stubVals[i].CurrentTime < tab.pbCurrentTime {
+					continue
+				}
+				// ^ff0f81f60ccc
+				dl.AddLine(coords, coords.Add(imgui.Vec2{
+					// X: float32(math.Cos(float64(stubVals[i].F[tab.stubIdx]))) * 15,
+					X: float32(stubVals[i].F[4]) * 2,
+					// Y: float32(math.Sin(float64(stubVals[i].F[tab.stubIdx]))) * 15,
+					Y: float32(stubVals[i].F[6]) * 2,
+				}), 0xFFFF0000)
+				break
+			}
+		}
 		if deathCoordsSet {
 			a := uint32(255-255*float32(tab.pbCurrentTime-tab.Kills.Kills[foundDeath].CurrentTime)/float32(tab.pbTrailDuration)) << 24
-			dl.AddCircleFilled(deathCoords, 6, 0x000000FF|a)
+			dl.AddCircleFilled(deathCoords, 6, 0x000000AA|a)
 			if killerCoordsSet {
-				dl.AddCircle(killerCoords, 11, 0x000000FF|a)
-				dl.AddCircle(killerCoords, 13, 0x000000FF|a)
+				// dl.AddCircle(killerCoords, 11, 0x000000FF|a)
+				// dl.AddCircle(killerCoords, 13, 0x000000FF|a)
 				dl.AddLine(deathCoords, killerCoords, 0x000000FF|a)
 				midpoint := deathCoords
 				for range 4 {
@@ -425,6 +448,10 @@ func (tab *MapViewTab) runGeneral() {
 	imgui.TextUnformatted(fmt.Sprint("Sp: ", tab.imOutSp))
 	imgui.TextUnformatted(fmt.Sprint("Out size: ", tab.imOutSize))
 	imgui.TextUnformatted(fmt.Sprint("Aspect: ", float32(tab.rImageArea.Dx())/float32(tab.rImageArea.Dy())))
+	imgui.Separator()
+	imgui.TextUnformatted(fmt.Sprint("stub not found: ", tab.stubNotFound))
+	tab.stubNotFound = 0
+	imgui.SliderInt("stub idx", &tab.stubIdx, 0, 9)
 }
 
 func (tab *MapViewTab) runPaths() {

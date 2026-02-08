@@ -7,7 +7,6 @@ import (
 	"main/parsers/kills2"
 	"main/parsers/paths"
 	"main/parsers/stub0"
-	"main/parsers/stub1"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
@@ -57,13 +56,16 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		ECS:       &ecs.Mgr,
 		Paths:     paths,
 	}
+	stub0 := &stub0.PacketStubParser{
+		Data: map[uint64][]stub0.StubData{},
+	}
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
 		&packetmovement.PacketMovementParser{},
-		&stub0.PacketStubParser{},
-		&stub1.PacketStubParser{},
+		stub0,
+		// &stub1.PacketStubParser{},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot}
 	tabs := []inspector.Tab{}
@@ -91,6 +93,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		Ecs:          &ecs.Mgr,
 		Players:      slot,
 		Paths:        paths,
+		Stub0:        stub0,
 		TankMapsPath: "data/tankmaps",
 		DataminePath: "../War-Thunder-Datamine/",
 	})

@@ -13,7 +13,7 @@ type StubData struct {
 type PacketStubParser struct{}
 
 func (p *PacketStubParser) Name() string {
-	return "stub"
+	return "stub1"
 }
 
 func (p *PacketStubParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
