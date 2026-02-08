@@ -276,33 +276,47 @@ func (tab *MapViewTab) DrawView() {
 		if e == nil {
 			continue
 		}
-		foundKill := -1
+		foundDeath := -1
 		for i := range tab.Kills.Kills {
 			if tab.Kills.Kills[i].ResolvedVictim != e {
 				continue
 			}
-			foundKill = i
+			foundDeath = i
 			break
 		}
 		if showEverything {
 			coords := imgui.Vec2{}
-			killCoords := imgui.Vec2{}
-			killCoordsSet := false
+			deathCoords := imgui.Vec2{}
+			deathCoordsSet := false
+			// killerCoords := imgui.Vec2{}
+			// killerCoordsSet := false
 			for _, pos := range path {
 				x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
 				z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
 				coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
 				dl.PathLineToMergeDuplicate(coords)
-				if foundKill != -1 && pos.Time >= tab.Kills.Kills[foundKill].CurrentTime && !killCoordsSet {
-					killCoords = coords
-					killCoordsSet = true
+				if foundDeath != -1 && pos.Time >= tab.Kills.Kills[foundDeath].CurrentTime && !deathCoordsSet {
+					deathCoords = coords
+					deathCoordsSet = true
+					// killerPos := tab.Kills.Kills[foundDeath].ResolvedKillerPosition
+					// if killerPos != nil {
+					// 	killerCoords = imgui.Vec2{
+					// 		X: float32((((float64(killerPos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw),
+					// 		Y: float32((((float64(killerPos.Z) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw),
+					// 	}
+					// 	killerCoordsSet = true
+					// }
 				}
 			}
 			dl.PathStroke(0xFFFFFFFF)
 			dl.AddCircleFilled(coords, 3, 0xFF00FF00)
-			if killCoordsSet {
-				dl.AddCircleFilled(killCoords, 6, 0xFF0000FF)
+			if deathCoordsSet {
+				dl.AddCircleFilled(deathCoords, 6, 0xFF0000FF)
 			}
+			// if killerCoordsSet {
+			// 	dl.AddCircleFilled(killerCoords, 11, 0x880000FF)
+			// 	dl.AddCircleFilled(killerCoords, 13, 0x880000FF)
+			// }
 			continue
 		}
 		if path[0].Time > tab.pbCurrentTime {
@@ -311,12 +325,14 @@ func (tab *MapViewTab) DrawView() {
 		if path[len(path)-1].Time+tab.pbTrailDuration <= tab.pbCurrentTime {
 			continue
 		}
-		if foundKill != -1 && tab.Kills.Kills[foundKill].CurrentTime+tab.pbTrailDuration <= tab.pbCurrentTime {
+		if foundDeath != -1 && tab.Kills.Kills[foundDeath].CurrentTime+tab.pbTrailDuration <= tab.pbCurrentTime {
 			continue
 		}
 		coords := imgui.Vec2{}
-		killCoords := imgui.Vec2{}
-		killCoordsSet := false
+		deathCoords := imgui.Vec2{}
+		deathCoordsSet := false
+		killerCoords := imgui.Vec2{}
+		killerCoordsSet := false
 		for _, pos := range path {
 			if pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration {
 				continue
@@ -325,65 +341,36 @@ func (tab *MapViewTab) DrawView() {
 			z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
 			coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
 			dl.PathLineToMergeDuplicate(coords)
-			if foundKill != -1 && pos.Time >= tab.Kills.Kills[foundKill].CurrentTime && !killCoordsSet {
-				killCoords = coords
-				killCoordsSet = true
+			if foundDeath != -1 && pos.Time >= tab.Kills.Kills[foundDeath].CurrentTime && !deathCoordsSet {
+				deathCoords = coords
+				deathCoordsSet = true
+				killerPos := tab.Kills.Kills[foundDeath].ResolvedKillerPosition
+				if killerPos != nil {
+					killerCoords = tab.imOutSp.Add(imgui.Vec2{
+						X: float32((((float64(killerPos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw),
+						Y: float32(((2048 - (float64(killerPos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh),
+					})
+					killerCoordsSet = true
+				}
 			}
 		}
 		dl.PathStroke(0xFFFFFFFF)
-		if killCoordsSet {
-			a := uint32(255-255*float32(tab.pbCurrentTime-tab.Kills.Kills[foundKill].CurrentTime)/float32(tab.pbTrailDuration)) << 24
-			dl.AddCircleFilled(killCoords, 6, 0x000000FF|a)
+		if deathCoordsSet {
+			a := uint32(255-255*float32(tab.pbCurrentTime-tab.Kills.Kills[foundDeath].CurrentTime)/float32(tab.pbTrailDuration)) << 24
+			dl.AddCircleFilled(deathCoords, 6, 0x000000FF|a)
+			if killerCoordsSet {
+				dl.AddCircle(killerCoords, 11, 0x000000FF|a)
+				dl.AddCircle(killerCoords, 13, 0x000000FF|a)
+				dl.AddLine(deathCoords, killerCoords, 0x000000FF|a)
+				midpoint := deathCoords
+				for range 4 {
+					midpoint = midpoint.Add(killerCoords).Div(2)
+					dl.AddLine(midpoint, killerCoords, 0x0000FFFF|a)
+				}
+			}
 		} else {
 			dl.AddCircleFilled(coords, 3, 0xFF00FF00)
 		}
-		// if foundKill != -1 {
-		// 	killDrawn := false
-		// 	coords := imgui.Vec2{}
-		// 	drawnAnything := false
-		// 	for _, pos := range path {
-		// 		if !showEverything && (pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration) {
-		// 			continue
-		// 		}
-		// 		drawnAnything = true
-		// 		x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
-		// 		z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
-		// 		coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
-		// 		dl.PathLineToMergeDuplicate(coords)
-		// 		// && (showEverything || tab.Kills.Kills[foundKill].CurrentTime >= tab.pbCurrentTime-tab.pbTrailDuration)
-		// 		if pos.Time >= tab.Kills.Kills[foundKill].CurrentTime {
-		// 			a := uint32(0xFF000000)
-		// 			if !showEverything {
-		// 				a = uint32(255*float32(pos.Time-tab.Kills.Kills[foundKill].CurrentTime)/float32(tab.pbTrailDuration)) << 24
-		// 			}
-		// 			killDrawn = true
-		// 			dl.PathStroke(0xFFFFFFFF)
-		// 			dl.AddCircleFilled(coords, 6, 0x000000FF|a)
-		// 			break
-		// 		}
-		// 	}
-		// 	if !killDrawn && drawnAnything {
-		// 		dl.PathStroke(0xFFFFFFFF)
-		// 		dl.AddCircleFilled(coords, 3, 0xFF00FF00)
-		// 	}
-		// } else {
-		// 	coords := imgui.Vec2{}
-		// 	drawnAnything := false
-		// 	for _, pos := range path {
-		// 		if !showEverything && (pos.Time >= tab.pbCurrentTime || pos.Time <= tab.pbCurrentTime-tab.pbTrailDuration) {
-		// 			continue
-		// 		}
-		// 		drawnAnything = true
-		// 		x := (((float64(pos.X) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
-		// 		z := ((2048 - (float64(pos.Z)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
-		// 		coords = tab.imOutSp.Add(imgui.Vec2{X: float32(x), Y: float32(z)})
-		// 		dl.PathLineToMergeDuplicate(coords)
-		// 	}
-		// 	if drawnAnything {
-		// 		dl.PathStroke(0xFFFFFFFF)
-		// 		dl.AddCircleFilled(coords, 3, 0xFF00FF00)
-		// 	}
-		// }
 	}
 	hpath := tab.Paths.Paths[tab.highlightPath]
 	if hpath != nil {
@@ -405,6 +392,19 @@ func (tab *MapViewTab) DrawView() {
 		}
 		dl.PathStrokeV(0xAA0000FF, 0, 3)
 	}
+
+	// for _, k := range tab.Kills.Kills {
+	// 	x := (((float64(k.ResolvedVictimPositionX) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+	// 	z := ((2048 - (float64(k.ResolvedVictimPositionZ)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+	// 	coords := imgui.Vec2{X: float32(x), Y: float32(z)}
+	// 	dl.AddCircle(tab.imOutSp.Add(coords), 11, 0xFF0000FF)
+	// 	dl.AddCircle(tab.imOutSp.Add(coords), 13, 0xFF0000FF)
+	// 	x = (((float64(k.ResolvedKillerPositionX) - tab.rOffsets.TankMapCoord0[0]) / tab.rCoordScaleX) - float64(tab.rImageArea.Min.X)) * sw
+	// 	z = ((2048 - (float64(k.ResolvedKillerPositionZ)-tab.rOffsets.TankMapCoord0[1])/tab.rCoordScaleZ) - float64(tab.rImageArea.Min.Y)) * sh
+	// 	coords = imgui.Vec2{X: float32(x), Y: float32(z)}
+	// 	dl.AddCircle(tab.imOutSp.Add(coords), 11, 0xFF00FF00)
+	// 	dl.AddCircle(tab.imOutSp.Add(coords), 13, 0xFF00FF00)
+	// }
 }
 
 func (tab *MapViewTab) runGeneral() {

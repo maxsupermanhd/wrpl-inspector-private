@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
+	"main/parsers/paths"
 	"strconv"
 	"time"
 
@@ -15,13 +16,15 @@ type KillsTab struct {
 	kills   *kills2.PacketKillParser
 	ecs     *ecs2.EntityManager
 	players *packetslot.PacketSlotParser
+	paths   *paths.PositionRetainerParser
 }
 
-func NewKillsTab(kills *kills2.PacketKillParser, ecs *ecs2.EntityManager, players *packetslot.PacketSlotParser) *KillsTab {
+func NewKillsTab(kills *kills2.PacketKillParser, ecs *ecs2.EntityManager, players *packetslot.PacketSlotParser, paths *paths.PositionRetainerParser) *KillsTab {
 	return &KillsTab{
 		kills:   kills,
 		ecs:     ecs,
 		players: players,
+		paths:   paths,
 	}
 }
 
@@ -40,15 +43,17 @@ func (tab KillsTab) Run() {
 	}
 	if imgui.BeginChildStr("kills content") {
 		flags := imgui.TableFlagsBorders | imgui.TableFlagsResizable | imgui.TableFlagsSizingFixedFit | imgui.TableFlagsNoHostExtendX
-		if imgui.BeginTableV("kills", 9, flags, imgui.Vec2{}, 0) {
+		if imgui.BeginTableV("kills", 11, flags, imgui.Vec2{}, 0) {
 			imgui.TableSetupColumn("n")
 			imgui.TableSetupColumn("seq")
 			imgui.TableSetupColumn("time")
 			imgui.TableSetupColumn("killer")
 			imgui.TableSetupColumn("vehicle")
+			imgui.TableSetupColumn("pos")
 			imgui.TableSetupColumn("weapon")
 			imgui.TableSetupColumn("victim")
 			imgui.TableSetupColumn("vehicle")
+			imgui.TableSetupColumn("pos")
 			imgui.TableSetupColumn("munition")
 
 			imgui.TableHeadersRow()
@@ -68,6 +73,7 @@ func (tab KillsTab) Run() {
 					// imgui.PopStyleColor()
 					imgui.TableNextColumn()
 					imgui.TableNextColumn()
+					imgui.TableNextColumn()
 				} else {
 					playerid, _ := ecs2.GetObjectData[int32](&v.ResolvedKiller.Data, "unit__playerId")
 					if playerid < 0 || playerid >= int32(len(tab.players.Players)) {
@@ -84,12 +90,15 @@ func (tab KillsTab) Run() {
 					name, _ := ecs2.GetObjectData[string](&v.ResolvedKiller.Data, "unit__className")
 					imgui.TextUnformatted(name)
 					imgui.TableNextColumn()
+					imgui.TextUnformatted(fmt.Sprintf("%#+v", v.ResolvedVictimPosition))
+					imgui.TableNextColumn()
 				}
 
 				imgui.TextUnformatted(fmt.Sprint(v.PlayerWeapon))
 				imgui.TableNextColumn()
 
 				if v.ResolvedVictim == nil {
+					imgui.TableNextColumn()
 					imgui.TableNextColumn()
 					imgui.TableNextColumn()
 				} else {
@@ -107,6 +116,8 @@ func (tab KillsTab) Run() {
 					imgui.TableNextColumn()
 					name, _ := ecs2.GetObjectData[string](&v.ResolvedVictim.Data, "unit__className")
 					imgui.TextUnformatted(name)
+					imgui.TableNextColumn()
+					imgui.TextUnformatted(fmt.Sprintf("%#+v", v.ResolvedVictimPosition))
 					imgui.TableNextColumn()
 				}
 

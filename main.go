@@ -49,13 +49,14 @@ func main() {
 }
 
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
+	paths := paths.NewPositionRetainerParser()
 	ecs := ecs2.NewPacketECSParser(*chms)
 	slot := &packetslot.PacketSlotParser{KeepMessages: true}
 	kills := &kills2.PacketKillParser{
 		KeepKills: true,
 		ECS:       &ecs.Mgr,
+		Paths:     paths,
 	}
-	paths := paths.NewPositionRetainerParser()
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
@@ -82,7 +83,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, bitshiftui.NewBitShiftUI())
 	// tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
-	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot))
+	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot, paths))
 	tabs = append(tabs, &mapview.MapViewTab{
 		Backend:      ui.ImBackend,
 		Rpl:          rpl,
