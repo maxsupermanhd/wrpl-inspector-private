@@ -31,6 +31,8 @@ github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.6 h1:6rjbGhK88wB3s2ps/x5Ehu5M5mA
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.6/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.7 h1:lhuFiKM9H+cK8EQUiXJN2MYDg9W107RiY0GQSzf5R30=
 github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.7/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.8 h1:lLGr5XwnNShUk1hWHvAzbFYd15UQWYo7D6XviTqDy+M=
+github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.8/go.mod h1:qVYcYuf3c0UpMzs8gu8Wk9ZhwWyqxBHKAnsIr7p4Y+A=
 github.com/pierrec/lz4/v4 v4.1.25 h1:kocOqRffaIbU5djlIBr7Wh+cx82C0vtFb0fOurZHqD0=
 github.com/pierrec/lz4/v4 v4.1.25/go.mod h1:EoQMVJgeeEOMsCqCzqFm2O0cJvljX2nGZjcRIPL34O4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

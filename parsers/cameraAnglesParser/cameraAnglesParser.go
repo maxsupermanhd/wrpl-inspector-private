@@ -1,22 +1,15 @@
-package stub0
+package cameraanglesparser
 
 import (
 	"encoding/binary"
-	"main/parsers/ecs2"
+	"main/idfieldserializer"
 	"math"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
-type StubData struct {
-	CurrentTime uint32
-	EID         uint64
-	F           [10]float32
-	Rest        [5]byte
-}
-
-type StubData2 struct {
+type CameraAnglesData struct {
 	CurrentTime              uint32
 	EID                      uint64
 	Possible_looking_ang     [2]float32 // pitch, yaw
@@ -28,15 +21,15 @@ type StubData2 struct {
 	Some_eid        uint64
 }
 
-type PacketStubParser struct {
-	Data map[uint64][]StubData2
+type PacketCameraAnglesParser struct {
+	Data map[uint64][]CameraAnglesData
 }
 
-func (p *PacketStubParser) Name() string {
+func (p *PacketCameraAnglesParser) Name() string {
 	return "stub0"
 }
 
-func (p *PacketStubParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
+func (p *PacketCameraAnglesParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
 	return map[byte][][]packet.ParsingCondition{
 		4: {{
 			packet.NewParsingCondition(0, 0xff),
@@ -60,7 +53,7 @@ func vectorToDegrees(x, y, z float32) (pitch float32, yaw float32) {
 	return pitch, yaw
 }
 
-func (p *PacketStubParser) Parse(pk *packet.Packet) (any, error) {
+func (p *PacketCameraAnglesParser) Parse(pk *packet.Packet) (any, error) {
 	if len(pk.PacketPayload) < 40 {
 		return nil, nil
 	}
@@ -69,7 +62,7 @@ func (p *PacketStubParser) Parse(pk *packet.Packet) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	parsed := StubData2{
+	parsed := CameraAnglesData{
 		CurrentTime:              pk.CurrentTime,
 		EID:                      eid,
 		Possible_looking_ang:     [2]float32{},
@@ -82,7 +75,6 @@ func (p *PacketStubParser) Parse(pk *packet.Packet) (any, error) {
 	var case_1 [4]float32
 	var case_2 [3]float32
 	var case_3 [3]float32
-	var case_4_some_8 uint8
 	var case_5_some_float float32
 	var case_6_some_bool bool
 	r := danet.NewBitReader(pk.PacketPayload)
@@ -92,61 +84,30 @@ func (p *PacketStubParser) Parse(pk *packet.Packet) (any, error) {
 		return nil, err
 	}
 	r.IgnoreBytes(2)
-	var serializer = ecs2.IdFieldSerializer32{}
-	fields, err := serializer.ReadFieldsSizeAndFlag(r)
+	err = idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8) error {
+		switch fieldNum {
+		case 1:
+			return binary.Read(r, binary.LittleEndian, &case_1)
+		case 2:
+			return binary.Read(r, binary.LittleEndian, &case_2)
+		case 3:
+			return binary.Read(r, binary.LittleEndian, &case_3)
+		case 4:
+			return binary.Read(r, binary.LittleEndian, &parsed.Some_val)
+		case 5:
+			return binary.Read(r, binary.LittleEndian, &case_5_some_float)
+		case 6:
+			return r.ReadBoolInto(&case_6_some_bool)
+		case 7:
+			parsed.Some_eid, err = packet.ReadEID(r)
+			return err
+		default:
+			return idfieldserializer.ErrSkipField
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
-	var index uint8
-	for fields > 0 {
-		var uVar3 uint8
-		for fields>>uVar3&1 == 0 {
-			uVar3++
-		}
-		fields = fields & ^(1 << (uVar3 & 0x1f))
-		switch uVar3 {
-		case 1:
-			err = binary.Read(r, binary.LittleEndian, &case_1)
-			if err != nil {
-				return nil, err
-			}
-		case 2:
-			err = binary.Read(r, binary.LittleEndian, &case_2)
-			if err != nil {
-				return nil, err
-			}
-		case 3:
-			err = binary.Read(r, binary.LittleEndian, &case_3)
-			if err != nil {
-				return nil, err
-			}
-		case 4:
-			err = binary.Read(r, binary.LittleEndian, &case_4_some_8)
-			if err != nil {
-				return nil, err
-			}
-		case 5:
-			err = binary.Read(r, binary.LittleEndian, &case_5_some_float)
-			if err != nil {
-				return nil, err
-			}
-		case 6:
-			p, err := r.ReadBits(1)
-			if err != nil {
-				return nil, err
-			}
-			case_6_some_bool = p[0] == 1
-		case 7:
-			parsed.Some_eid, err = packet.ReadEID(r)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			serializer.SkipReadingField(index, r)
-		}
-		index += 1
-	}
-	parsed.EID = eid
 	sqrt_val := math.Sqrt(float64(case_1[0]*case_1[0] + case_1[1]*case_1[1] + case_1[2]*case_1[2] + case_1[3]*case_1[3]))
 	var v0_normalized float32
 	var v1_normalized float32
@@ -187,7 +148,6 @@ func (p *PacketStubParser) Parse(pk *packet.Packet) (any, error) {
 		parsed.Possible_position_offset[1] = case_2[1]
 		parsed.Possible_position_offset[2] = case_2[2]
 	}
-	parsed.Some_val = case_4_some_8
 	parsed.Some_magnitutde = 0.001
 	if 0.001 < case_5_some_float {
 		if case_5_some_float < 100.0 {

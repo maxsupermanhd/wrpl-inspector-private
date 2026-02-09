@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	cameraanglesparser "main/parsers/cameraAnglesParser"
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
 	"main/parsers/paths"
-	"main/parsers/stub0"
 	"maps"
 	"math"
 	"slices"
@@ -25,13 +25,13 @@ import (
 )
 
 type MapViewTab struct {
-	Backend backend.Backend[glfwbackend.GLFWWindowFlags]
-	Rpl     *inspector.LoadedReplay
-	Kills   *kills2.PacketKillParser
-	Ecs     *ecs2.EntityManager
-	Players *packetslot.PacketSlotParser
-	Paths   *paths.PositionRetainerParser
-	Stub0   *stub0.PacketStubParser
+	Backend      backend.Backend[glfwbackend.GLFWWindowFlags]
+	Rpl          *inspector.LoadedReplay
+	Kills        *kills2.PacketKillParser
+	Ecs          *ecs2.EntityManager
+	Players      *packetslot.PacketSlotParser
+	Paths        *paths.PositionRetainerParser
+	CameraAngles *cameraanglesparser.PacketCameraAnglesParser
 
 	TankMapsPath string
 	DataminePath string
@@ -360,7 +360,7 @@ func (tab *MapViewTab) DrawView() {
 			}
 		}
 		dl.PathStroke(0xFFFFFFFF)
-		stubVals := tab.Stub0.Data[eid]
+		stubVals := tab.CameraAngles.Data[eid]
 		if stubVals == nil {
 			tab.stubNotFound++
 		} else {
@@ -368,7 +368,6 @@ func (tab *MapViewTab) DrawView() {
 				if stubVals[i].CurrentTime < tab.pbCurrentTime {
 					continue
 				}
-				// ^ff0f81f60ccc
 				yaw := stubVals[i].Possible_gun_cirlce_ang[1] - math.Pi/2
 				//yaw2 := stubVals[i].Possible_looking_ang[1] - math.Pi/2
 				dl.AddLine(coords, coords.Add(imgui.Vec2{

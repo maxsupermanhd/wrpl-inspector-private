@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	cameraanglesparser "main/parsers/cameraAnglesParser"
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
 	"main/parsers/paths"
-	"main/parsers/stub0"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
@@ -56,15 +56,15 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		ECS:       &ecs.Mgr,
 		Paths:     paths,
 	}
-	stub0 := &stub0.PacketStubParser{
-		Data: map[uint64][]stub0.StubData2{},
+	cameraAngles := &cameraanglesparser.PacketCameraAnglesParser{
+		Data: map[uint64][]cameraanglesparser.CameraAnglesData{},
 	}
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
 		&packetmovement.PacketMovementParser{},
-		stub0,
+		cameraAngles,
 		// &stub1.PacketStubParser{},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot}
@@ -93,7 +93,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		Ecs:          &ecs.Mgr,
 		Players:      slot,
 		Paths:        paths,
-		Stub0:        stub0,
+		CameraAngles: cameraAngles,
 		TankMapsPath: "data/tankmaps",
 		DataminePath: "../War-Thunder-Datamine/",
 	})
