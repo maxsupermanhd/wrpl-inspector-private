@@ -3,7 +3,6 @@ package kills2
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"main/idfieldserializer"
 	"main/parsers/ecs2"
 	"main/parsers/paths"
@@ -129,7 +128,6 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 		case 0xc:
 			return r.ReadLenStrInto(&parsed.DestroyedWeapon)
 		default:
-			log.Printf("skip %d", fieldNum)
 			return idfieldserializer.ErrSkipField
 		}
 		return nil
