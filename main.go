@@ -57,7 +57,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		Paths:     paths,
 	}
 	stub0 := &stub0.PacketStubParser{
-		Data: map[uint64][]stub0.StubData{},
+		Data: map[uint64][]stub0.StubData2{},
 	}
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,

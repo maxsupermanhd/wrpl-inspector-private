@@ -369,12 +369,16 @@ func (tab *MapViewTab) DrawView() {
 					continue
 				}
 				// ^ff0f81f60ccc
+				yaw := stubVals[i].Possible_gun_cirlce_ang[1] - math.Pi/2
+				//yaw2 := stubVals[i].Possible_looking_ang[1] - math.Pi/2
 				dl.AddLine(coords, coords.Add(imgui.Vec2{
-					// X: float32(math.Cos(float64(stubVals[i].F[tab.stubIdx]))) * 15,
-					X: float32(stubVals[i].F[4]) * 2,
-					// Y: float32(math.Sin(float64(stubVals[i].F[tab.stubIdx]))) * 15,
-					Y: float32(stubVals[i].F[6]) * 2,
+					X: float32(math.Cos(float64(yaw)) * 15),
+					Y: float32(math.Sin(float64(yaw)) * 15),
 				}), 0xFFFF0000)
+				//dl.AddLine(coords, coords.Add(imgui.Vec2{
+				//	X: float32(math.Cos(float64(yaw2)) * 15),
+				//	Y: float32(math.Sin(float64(yaw2)) * 15),
+				//}), 0xAAAA0000)
 				break
 			}
 		}
