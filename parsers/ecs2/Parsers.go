@@ -147,8 +147,8 @@ func StringListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 		if err != nil {
 			return nil, err
 		}
-		tstr := pstr.(*string)
-		n[i] = *tstr
+		tstr := pstr.(string)
+		n[i] = tstr
 	}
 	return n, nil
 }
