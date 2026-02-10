@@ -7,6 +7,7 @@ import (
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
 	"main/parsers/paths"
+	"main/parsers/slot2"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
 	"main/tabs/interpreter2"
@@ -15,18 +16,18 @@ import (
 	"main/tabs/resultsui"
 	"os"
 
+	"main/tabs/playersui"
+
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"
 	basictabs "github.com/maxsupermanhd/wrpl-inspector/v2/inspector/basicTabs"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/packetui"
-	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/playersui"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
 	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
 	packetmovement "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/movement"
-	packetslot "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/slot"
 )
 
 var (
@@ -50,7 +51,7 @@ func main() {
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
 	paths := paths.NewPositionRetainerParser()
 	ecs := ecs2.NewPacketECSParser(*chms)
-	slot := &packetslot.PacketSlotParser{KeepMessages: true}
+	slot := &slot2.PacketSlotParser{KeepMessages: true}
 	kills := &kills2.PacketKillParser{
 		KeepKills: true,
 		ECS:       &ecs.Mgr,

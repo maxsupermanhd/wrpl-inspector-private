@@ -9,6 +9,7 @@ import (
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
 	"main/parsers/paths"
+	"main/parsers/slot2"
 	"maps"
 	"math"
 	"slices"
@@ -21,7 +22,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/imui"
-	packetslot "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/slot"
 )
 
 type MapViewTab struct {
@@ -29,7 +29,7 @@ type MapViewTab struct {
 	Rpl          *inspector.LoadedReplay
 	Kills        *kills2.PacketKillParser
 	Ecs          *ecs2.EntityManager
-	Players      *packetslot.PacketSlotParser
+	Players      *slot2.PacketSlotParser
 	Paths        *paths.PositionRetainerParser
 	CameraAngles *cameraanglesparser.PacketCameraAnglesParser
 

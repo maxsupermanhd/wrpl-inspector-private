@@ -11,7 +11,7 @@ require github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.8
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.3
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pierrec/lz4/v4 v4.1.25
