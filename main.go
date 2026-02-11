@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	cameraanglesparser "main/parsers/cameraAnglesParser"
 	"main/parsers/ecs2"
+	"main/parsers/fm"
 	"main/parsers/kills2"
 	"main/parsers/paths"
 	"main/parsers/slot2"
@@ -66,7 +67,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		&packetaward.PacketAwardParser{},
 		&packetmovement.PacketMovementParser{},
 		cameraAngles,
-		// &stub1.PacketStubParser{},
+		&fm.PacketFlightModelParser{},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot}
 	tabs := []inspector.Tab{}
