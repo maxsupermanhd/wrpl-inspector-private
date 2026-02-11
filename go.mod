@@ -7,7 +7,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 )
 
-require github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.10
+require github.com/maxsupermanhd/wrpl-inspector/v2 v2.0.11
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
