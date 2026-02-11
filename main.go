@@ -61,15 +61,18 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	cameraAngles := &cameraanglesparser.PacketCameraAnglesParser{
 		Data: map[uint64][]cameraanglesparser.CameraAnglesData{},
 	}
+	fmp := &fm.PacketFlightModelParser{
+		KeepResults: true,
+	}
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
 		&packetmovement.PacketMovementParser{},
 		cameraAngles,
-		&fm.PacketFlightModelParser{},
+		fmp,
 	}
-	streams := []packet.PacketStreamProvider{ecs, slot}
+	streams := []packet.PacketStreamProvider{ecs, slot, fmp}
 	tabs := []inspector.Tab{}
 	tabs = append(tabs, basictabs.NewBasicSummaryTab(rpl))
 	tabs = append(tabs, basictabs.NewBasicTextTab("Header", spew.Sdump(rpl.Header)))

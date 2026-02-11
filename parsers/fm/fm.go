@@ -12,7 +12,9 @@ import (
 )
 
 type PacketFlightModelParser struct {
-	ECS *ecs2.EntityManager
+	ECS         *ecs2.EntityManager
+	KeepResults bool
+	Results     []packet.ParsedPacket
 }
 
 func (p *PacketFlightModelParser) Name() string {
@@ -25,24 +27,56 @@ func (p *PacketFlightModelParser) ParsesMatching() map[byte][][]packet.ParsingCo
 	}
 }
 
+func (p *PacketFlightModelParser) GetPacketStreams() []packet.ParsedPacketStream {
+	return []packet.ParsedPacketStream{{
+		Name:    "rem",
+		Packets: p.Results,
+	}}
+}
+
 type FMUpdatePacket struct {
 	Rem     []byte
 	Entries []*FMEntry
 }
 
 type FMEntry struct {
-	HasEID     bool
-	EID        uint64
-	WasSkipped bool
-	Unk0       [4]byte
-	Unk1       byte
-	Unk2       []byte
+	HasEID bool
+	EID    uint64
+	Data   *FMData
+}
+
+type FMData struct {
+	Unk0 [4]byte
+	Unk1 byte
+	Unk2 []byte
+	Unk3 byte
 }
 
 func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
+	ret, err := p.Parse2(pk)
+	if p.KeepResults {
+		p.Results = append(p.Results, packet.ParsedPacket{
+			Packet: packet.Packet{
+				Seq:           pk.Seq,
+				CurrentTime:   pk.CurrentTime,
+				PacketType:    2,
+				PacketPayload: ret.Rem,
+			},
+			ParsersResults: []packet.ParserResult{{
+				Parser: "fm",
+				Data:   ret,
+				Err:    err,
+			}},
+		})
+	}
+	return ret, err
+}
+
+// func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (any, error) {
+func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, error) {
 	ret := &FMUpdatePacket{}
 	r := danet.NewBitReader(pk.PacketPayload)
-	defer func() { // for clarity in inspector parsing results dump
+	defer func() {
 		ret.Rem, _ = io.ReadAll(r)
 		slices.Reverse(ret.Entries)
 	}()
@@ -73,36 +107,46 @@ func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 		ret.Entries = append(ret.Entries, e)
 
 		// does it have data
-		e.WasSkipped, err = r.ReadBool()
+		noData, err := r.ReadBool()
 		if err != nil {
 			return ret, fmt.Errorf("reading skip entry bit: %w", err)
 		}
-		if e.WasSkipped {
+		if noData {
 			continue
 		}
+		ed := &FMData{}
+		e.Data = ed
 
 		// at this point it's anyone's guess pretty much
 
-		n, err := r.Read(e.Unk0[:])
+		n, err := r.Read(ed.Unk0[:])
 		if err != nil {
 			return ret, fmt.Errorf("reading unk0: %w", err)
 		}
-		if n != len(e.Unk0) {
+		if n != len(ed.Unk0) {
 			return ret, fmt.Errorf("reading skip entry bit: %w", err)
 		}
-		if !bytes.Equal(e.Unk0[:], []byte{0, 0, 0, 0}) {
-			return ret, fmt.Errorf("unk0 is not full zero, don't know what to do now: %#v", e.Unk0)
+		if !bytes.Equal(ed.Unk0[:], []byte{0, 0, 0, 0}) && !bytes.Equal(ed.Unk0[:], []byte{0x20, 0, 0, 0}) {
+			return ret, fmt.Errorf("unk0 is not full zero, don't know what to do now: %#v", ed.Unk0)
 		}
 
-		e.Unk1, err = r.ReadByte()
+		ed.Unk1, err = r.ReadByte()
 		if err != nil {
 			return ret, fmt.Errorf("reading unk1: %w", err)
 		}
-		if e.Unk1 != 0 {
-			e.Unk2, err = r.ReadBits(9)
+		if ed.Unk1 != 0 {
+			ed.Unk2, err = r.ReadBits(9)
 			if err != nil {
 				return ret, fmt.Errorf("reading unk2: %w", err)
 			}
+		}
+
+		ed.Unk3, err = r.ReadByte()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
+		if ed.Unk3 != 0x10 {
+			return ret, fmt.Errorf("unk3 is not 0x10, don't know what to do now: %#v", ed.Unk3)
 		}
 
 		return ret, fmt.Errorf("now what lol")
