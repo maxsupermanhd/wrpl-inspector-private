@@ -2,6 +2,7 @@ package fm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"main/parsers/ecs2"
@@ -46,10 +47,13 @@ type FMEntry struct {
 }
 
 type FMData struct {
-	Unk0 [4]byte
-	Unk1 byte
-	Unk2 []byte
-	Unk3 byte
+	Unk0     [4]byte
+	Unk1     byte
+	Unk2     []byte
+	Unk3     byte
+	Heading  float32
+	Altitude float32
+	Bank     float32
 }
 
 func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
@@ -149,7 +153,31 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			return ret, fmt.Errorf("unk3 is not 0x10, don't know what to do now: %#v", ed.Unk3)
 		}
 
+		r.IgnoreBits(5)
+		r.IgnoreBytes(4)
+		packedBytes, err := r.ReadBytes(4)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
+		ed.Heading, ed.Altitude, ed.Bank = unpackEuler(binary.LittleEndian.Uint32(packedBytes))
+
 		return ret, fmt.Errorf("now what lol")
 	}
 	return ret, nil
+}
+
+func unpackEuler(packed uint32) (heading, attitude, bank float32) {
+	heading = float32((packed>>19)&((1<<10)-1)) * float32(3.1415926535) / float32((1<<10)-1)
+	attitude = float32((packed>>10)&((1<<9)-1)) * float32(1.570796326794895) / float32((1<<9)-1)
+	bank = float32(packed&((1<<10)-1)) * float32(3.1415926535) / float32((1<<10)-1)
+	if packed&(1<<31) != 0 {
+		heading = -heading
+	}
+	if packed&(1<<30) != 0 {
+		attitude = -attitude
+	}
+	if packed&(1<<29) != 0 {
+		bank = -bank
+	}
+	return
 }
