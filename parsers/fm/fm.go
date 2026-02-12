@@ -1,11 +1,11 @@
 package fm
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"main/parsers/ecs2"
+	"math"
 	"slices"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
@@ -47,13 +47,26 @@ type FMEntry struct {
 }
 
 type FMData struct {
-	Unk0     [4]byte
-	Unk1     byte
-	Unk2     []byte
-	Unk3     byte
-	Heading  float32
-	Altitude float32
-	Bank     float32
+	Unk0       bool
+	Unk1       bool
+	Unk2       bool
+	Unk3       uint32
+	Unk4       bool
+	Unk5       *FMDataUnk5
+	Unk10      uint64
+	Unk11      []uint64
+	PosX       float32
+	PosY       float32
+	PosZ       float32
+	EulerBytes []byte
+	Unk12      []byte
+}
+
+type FMDataUnk5 struct {
+	Unk6 bool
+	Unk7 bool
+	Unk8 bool
+	Unk9 []bool
 }
 
 func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
@@ -121,47 +134,106 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 		ed := &FMData{}
 		e.Data = ed
 
-		// at this point it's anyone's guess pretty much
-
-		n, err := r.Read(ed.Unk0[:])
+		ed.Unk0, err = r.ReadBool()
 		if err != nil {
 			return ret, fmt.Errorf("reading unk0: %w", err)
 		}
-		if n != len(ed.Unk0) {
-			return ret, fmt.Errorf("reading skip entry bit: %w", err)
-		}
-		if !bytes.Equal(ed.Unk0[:], []byte{0, 0, 0, 0}) && !bytes.Equal(ed.Unk0[:], []byte{0x20, 0, 0, 0}) {
-			return ret, fmt.Errorf("unk0 is not full zero, don't know what to do now: %#v", ed.Unk0)
-		}
-
-		ed.Unk1, err = r.ReadByte()
+		ed.Unk1, err = r.ReadBool()
 		if err != nil {
 			return ret, fmt.Errorf("reading unk1: %w", err)
 		}
-		if ed.Unk1 != 0 {
-			ed.Unk2, err = r.ReadBits(9)
+		if ed.Unk0 && ed.Unk1 {
+			continue
+		}
+
+		ed.Unk2, err = r.ReadBool()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk2: %w", err)
+		}
+		unk3b, err := r.ReadBytes(4)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
+		ed.Unk3 = binary.LittleEndian.Uint32(unk3b)
+
+		ed.Unk4, err = r.ReadBool()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk4: %w", err)
+		}
+		unk5, err := r.ReadBool()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk5: %w", err)
+		}
+		if unk5 {
+			ed.Unk5 = &FMDataUnk5{}
+			ed.Unk5.Unk6, err = r.ReadBool()
 			if err != nil {
-				return ret, fmt.Errorf("reading unk2: %w", err)
+				return ret, fmt.Errorf("reading unk6: %w", err)
+			}
+			ed.Unk5.Unk7, err = r.ReadBool()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk7: %w", err)
+			}
+			ed.Unk5.Unk8, err = r.ReadBool()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk8: %w", err)
+			}
+			bitsetLen, err := r.ReadBits(4)
+			if err != nil {
+				return ret, fmt.Errorf("reading unk5 -> bitsetLen: %w", err)
+			}
+			ed.Unk5.Unk9 = []bool{}
+			for i := range bitsetLen {
+				bit, err := r.ReadBool()
+				if err != nil {
+					return ret, fmt.Errorf("reading unk5 -> bitset val %d/%d: %w", i, ed.Unk10, err)
+				}
+				ed.Unk5.Unk9 = append(ed.Unk5.Unk9, bit)
 			}
 		}
 
-		ed.Unk3, err = r.ReadByte()
+		ed.Unk10, err = r.ReadCompressed()
 		if err != nil {
-			return ret, fmt.Errorf("reading unk3: %w", err)
+			return ret, fmt.Errorf("reading unk10: %w", err)
 		}
-		if ed.Unk3 != 0x10 {
-			return ret, fmt.Errorf("unk3 is not 0x10, don't know what to do now: %#v", ed.Unk3)
+		ed.Unk10 = -(ed.Unk10 & 1) ^ ed.Unk10>>1
+		for i := range ed.Unk10 {
+			val, err := r.ReadCompressed()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk11 bitset val %d/%d: %w", i, ed.Unk10, err)
+			}
+			ed.Unk11 = append(ed.Unk11, val)
 		}
 
-		r.IgnoreBits(5)
-		r.IgnoreBytes(4)
-		packedBytes, err := r.ReadBytes(4)
+		posXb, err := r.ReadBytes(4)
 		if err != nil {
-			return ret, fmt.Errorf("reading unk3: %w", err)
+			return ret, fmt.Errorf("reading posX bytes: %w", err)
 		}
-		ed.Heading, ed.Altitude, ed.Bank = unpackEuler(binary.LittleEndian.Uint32(packedBytes))
+		ed.PosX = math.Float32frombits(binary.LittleEndian.Uint32(posXb))
+		posYb, err := r.ReadBytes(4)
+		if err != nil {
+			return ret, fmt.Errorf("reading posY bytes: %w", err)
+		}
+		ed.PosY = math.Float32frombits(binary.LittleEndian.Uint32(posYb))
+		posZb, err := r.ReadBytes(4)
+		if err != nil {
+			return ret, fmt.Errorf("reading posZ bytes: %w", err)
+		}
+		ed.PosZ = math.Float32frombits(binary.LittleEndian.Uint32(posZb))
 
-		return ret, fmt.Errorf("now what lol")
+		ed.EulerBytes, err = r.ReadBytes(4)
+		if err != nil {
+			return ret, fmt.Errorf("reading euler bytes: %w", err)
+		}
+
+		r.AlignToByteBoundary()
+
+		ed.Unk12, err = r.ReadBytes(8)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk12: %w", err)
+		}
+
+		// return ret, fmt.Errorf("now what lol")
 	}
 	return ret, nil
 }
