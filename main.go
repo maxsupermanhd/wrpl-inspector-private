@@ -16,6 +16,7 @@ import (
 	"main/tabs/mapview"
 	"main/tabs/resultsui"
 	"os"
+	"runtime"
 
 	"main/tabs/playersui"
 
@@ -38,6 +39,10 @@ var (
 
 // ^0f8bfe0e090001(........)
 func main() {
+	if runtime.GOOS == "darwin" {
+		runtime.LockOSThread()
+	}
+	runtime.LockOSThread()
 	chms = noerr(ecs2.ReadComponentHashMaps(bytes.NewReader(noerr(os.ReadFile("ecshashes.json")))))
 	ui = &inspector.UI{
 		InitFont:        noerr(os.ReadFile("HackNerdFontMono-Regular.ttf")),
