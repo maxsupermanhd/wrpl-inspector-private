@@ -554,9 +554,11 @@ func (tab *MapViewTab) runPaths() {
 func (tab *MapViewTab) runAreas() {
 	for _, k := range slices.Sorted(maps.Keys(tab.rAreas)) {
 		v := tab.rAreas[k]
-		imgui.TextUnformatted(fmt.Sprintf("%q %q", k, v.Type))
-		for i2, v2 := range v.TM {
-			imgui.TextUnformatted(fmt.Sprintf("%d %v", i2, v2))
+		if imgui.TreeNodeStr(fmt.Sprintf("%q %q", k, v.Type)) {
+			for i2, v2 := range v.TM {
+				imgui.TextUnformatted(fmt.Sprintf("%d %v", i2, v2))
+			}
+			imgui.TreePop()
 		}
 	}
 }
