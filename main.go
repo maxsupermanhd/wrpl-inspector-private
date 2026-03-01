@@ -15,6 +15,7 @@ import (
 	"main/tabs/killsui"
 	"main/tabs/mapview"
 	"main/tabs/resultsui"
+	"main/tabs/valuesearch"
 	"os"
 	"runtime"
 
@@ -92,7 +93,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, ecsui2.NewECSUI(rpl, ecs, hashNames, hashTypes))
 	tabs = append(tabs, interpreter2.NewByteInterpreterTab(rpl, streams...))
 	tabs = append(tabs, bitshiftui.NewBitShiftUI())
-	// tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
+	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
 	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot, paths))
 	tabs = append(tabs, &mapview.MapViewTab{
