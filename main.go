@@ -84,7 +84,11 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, genBlkJSONTab("Settings raw", rpl.Settings))
 	// tabs = append(tabs, genBlkJSONTab("Results raw", rpl.Results))
 	tabs = append(tabs, noerr(resultsui.NewResultsTab(rpl.Results)))
-	tabs = append(tabs, packetui.NewPacketsTab(rpl, streams...))
+	tabPackets := packetui.NewPacketsTab(rpl, streams...)
+	tabPackets.UISaveLoadFilter = func() bool {
+		return fslSaveLoadFilter(rpl, tabPackets)
+	}
+	tabs = append(tabs, tabPackets)
 	hashTypes := chms.ComponentNames
 	hashNames := map[uint32]string{}
 	for k, v := range chms.DataComponents {
