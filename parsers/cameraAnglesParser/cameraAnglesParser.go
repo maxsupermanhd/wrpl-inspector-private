@@ -26,7 +26,7 @@ type PacketCameraAnglesParser struct {
 }
 
 func (p *PacketCameraAnglesParser) Name() string {
-	return "stub0"
+	return "cameraangles"
 }
 
 func (p *PacketCameraAnglesParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
