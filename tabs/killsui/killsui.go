@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"main/parsers/ecs2"
 	"main/parsers/kills2"
-	"main/parsers/paths"
 	"main/parsers/slot2"
 	"strconv"
 	"time"
@@ -16,15 +15,13 @@ type KillsTab struct {
 	kills   *kills2.PacketKillParser
 	ecs     *ecs2.EntityManager
 	players *slot2.PacketSlotParser
-	paths   *paths.PositionRetainerParser
 }
 
-func NewKillsTab(kills *kills2.PacketKillParser, ecs *ecs2.EntityManager, players *slot2.PacketSlotParser, paths *paths.PositionRetainerParser) *KillsTab {
+func NewKillsTab(kills *kills2.PacketKillParser, ecs *ecs2.EntityManager, players *slot2.PacketSlotParser) *KillsTab {
 	return &KillsTab{
 		kills:   kills,
 		ecs:     ecs,
 		players: players,
-		paths:   paths,
 	}
 }
 

@@ -101,7 +101,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 	tabs = append(tabs, bitshiftui.NewBitShiftUI())
 	tabs = append(tabs, valuesearch.NewValueSearchTab(rpl, streams...))
 	tabs = append(tabs, playersui.NewPlayersUI(rpl, slot))
-	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot, paths))
+	tabs = append(tabs, killsui.NewKillsTab(kills, &ecs.Mgr, slot))
 	tabs = append(tabs, &mapview.MapViewTab{
 		Backend:      ui.ImBackend,
 		Rpl:          rpl,
