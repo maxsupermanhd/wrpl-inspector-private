@@ -3,12 +3,14 @@ package critical
 import (
 	"encoding/binary"
 	"main/idfieldserializer"
+	"main/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
 type CriticalDamageParser struct {
+	ECS *ecs2.EntityManager
 }
 
 func (p *CriticalDamageParser) Name() string {
@@ -27,28 +29,48 @@ func (p *CriticalDamageParser) ParsesMatching() map[byte][][]packet.ParsingCondi
 }
 
 type CriticalDamagePacket struct {
-	OffendedUID uint16
-	PlayerPID   uint32
-	Vehicle     string
-	PlayerUID   uint16
-	Fire        bool
-	Unk0        byte
+	Seq         uint64
+	CurrentTime uint32
+
+	OffendedUID    uint16
+	OffendedEntity *ecs2.Entity
+	PlayerPID      uint32
+	Vehicle        string
+	PlayerUID      uint16
+	PlayerEntity   *ecs2.Entity
+	Fire           bool
+	Unk0           byte
 }
 
 func (p *CriticalDamageParser) Parse(pk *packet.Packet) (any, error) {
-	ret := CriticalDamagePacket{}
+	ret := CriticalDamagePacket{
+		Seq:         pk.Seq,
+		CurrentTime: pk.CurrentTime,
+	}
 	r := danet.NewBitReader(pk.PacketPayload[4:])
 	err := idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8) error {
 		var err error
 		switch fieldNum {
 		case 1:
-			return binary.Read(r, binary.LittleEndian, &ret.OffendedUID)
+			err = binary.Read(r, binary.LittleEndian, &ret.OffendedUID)
+			if err != nil {
+				return err
+			}
+			if p.ECS != nil {
+				ret.OffendedEntity = p.ECS.Uid_lookup[int32(ret.OffendedUID&0x7FF)]
+			}
 		case 2:
 			return binary.Read(r, binary.LittleEndian, &ret.PlayerPID)
 		case 3:
 			return r.ReadLenStrInto(&ret.Vehicle)
 		case 4:
-			return binary.Read(r, binary.LittleEndian, &ret.PlayerUID)
+			err = binary.Read(r, binary.LittleEndian, &ret.PlayerUID)
+			if err != nil {
+				return err
+			}
+			if p.ECS != nil {
+				ret.PlayerEntity = p.ECS.Uid_lookup[int32(ret.OffendedUID&0x7FF)]
+			}
 		case 5:
 			return r.ReadBoolInto(&ret.Fire)
 		case 6:

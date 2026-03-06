@@ -77,7 +77,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		cameraAngles,
 		fmp,
 		&mpiparser.MPIStuffParser{},
-		&critical.CriticalDamageParser{},
+		&critical.CriticalDamageParser{ECS: &ecs.Mgr},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot, fmp}
 	tabs := []inspector.Tab{}
