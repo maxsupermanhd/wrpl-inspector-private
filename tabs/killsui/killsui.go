@@ -90,7 +90,9 @@ func (tab KillsTab) Run() {
 					name, _ := ecs2.GetObjectData[string](&v.ResolvedKiller.Data, "unit__className")
 					imgui.TextUnformatted(name)
 					imgui.TableNextColumn()
-					imgui.TextUnformatted(fmt.Sprintf("%#+v", v.ResolvedVictimPosition))
+					if v.ResolvedKillerPosition != nil {
+						imgui.TextUnformatted(fmt.Sprintf("X %d Y %d Z %d", v.ResolvedKillerPosition.X, v.ResolvedKillerPosition.Y, v.ResolvedKillerPosition.Z))
+					}
 					imgui.TableNextColumn()
 				}
 
@@ -117,7 +119,9 @@ func (tab KillsTab) Run() {
 					name, _ := ecs2.GetObjectData[string](&v.ResolvedVictim.Data, "unit__className")
 					imgui.TextUnformatted(name)
 					imgui.TableNextColumn()
-					imgui.TextUnformatted(fmt.Sprintf("%#+v", v.ResolvedVictimPosition))
+					if v.ResolvedVictimPosition != nil {
+						imgui.TextUnformatted(fmt.Sprintf("X %d Y %d Z %d", v.ResolvedVictimPosition.X, v.ResolvedVictimPosition.Y, v.ResolvedVictimPosition.Z))
+					}
 					imgui.TableNextColumn()
 				}
 
