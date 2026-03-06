@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	fslIsModalOpen bool
-	fslLastError   error
-	fslInputAlias  string
+	fslLastError        error
+	fslInputAlias       string
+	fslConfirmDeleteIdx int
 )
 
 type flsEntry struct {
@@ -52,6 +52,7 @@ func fslSaveLoadFilter(rpl *inspector.LoadedReplay, tab *packetui.PacketsTab) bo
 	imgui.SameLine()
 	if imgui.Button("Save/Load filters") {
 		fslLastError = fslEntriesLoad()
+		fslConfirmDeleteIdx = 0
 		imgui.OpenPopupStr("Save/Load filters")
 	}
 	shouldUpdate := false
@@ -109,9 +110,16 @@ func fslSaveLoadFilter(rpl *inspector.LoadedReplay, tab *packetui.PacketsTab) bo
 					shouldUpdate = true
 					imgui.CloseCurrentPopup()
 				}
-				if imgui.SmallButton("del") {
-					fslEntries = append(fslEntries[:i], fslEntries[i+1:]...)
-					fslLastError = fslEntriesSave()
+				if fslConfirmDeleteIdx == i+1 {
+					if imgui.SmallButton("confirm") {
+						fslEntries = append(fslEntries[:i], fslEntries[i+1:]...)
+						fslLastError = fslEntriesSave()
+						fslConfirmDeleteIdx = 0
+					}
+				} else {
+					if imgui.SmallButton("del") {
+						fslConfirmDeleteIdx = i + 1
+					}
 				}
 				imgui.PopID()
 			}
