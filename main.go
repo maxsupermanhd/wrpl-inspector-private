@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	cameraanglesparser "main/parsers/cameraAnglesParser"
+	"main/parsers/critical"
 	"main/parsers/ecs2"
 	"main/parsers/fm"
 	"main/parsers/kills2"
+	mpiparser "main/parsers/mpistuff"
 	"main/parsers/paths"
 	"main/parsers/slot2"
 	"main/tabs/bitshiftui"
@@ -30,7 +32,6 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
 	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
-	packetmovement "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/movement"
 )
 
 var (
@@ -73,9 +74,10 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		kills, ecs, slot, paths,
 		&packetchat.PacketChatParser{},
 		&packetaward.PacketAwardParser{},
-		&packetmovement.PacketMovementParser{},
 		cameraAngles,
 		fmp,
+		&mpiparser.MPIStuffParser{},
+		&critical.CriticalDamageParser{},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot, fmp}
 	tabs := []inspector.Tab{}
