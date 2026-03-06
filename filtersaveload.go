@@ -89,6 +89,7 @@ func fslSaveLoadFilter(rpl *inspector.LoadedReplay, tab *packetui.PacketsTab) bo
 			imgui.TableSetupColumn("actions")
 			imgui.TableHeadersRow()
 			for i, e := range fslEntries {
+				imgui.PushIDInt(int32(i))
 				imgui.TableNextRow()
 				imgui.TableNextColumn()
 				imgui.TextUnformatted(strconv.Itoa(i))
@@ -112,6 +113,7 @@ func fslSaveLoadFilter(rpl *inspector.LoadedReplay, tab *packetui.PacketsTab) bo
 					fslEntries = append(fslEntries[:i], fslEntries[i+1:]...)
 					fslLastError = fslEntriesSave()
 				}
+				imgui.PopID()
 			}
 			imgui.EndTable()
 		}
