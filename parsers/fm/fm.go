@@ -97,30 +97,30 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 		// ret.Rem, _ = io.ReadAll(r)
 		slices.Reverse(ret.Entries)
 	}()
-	eid := uint64(0)
+	uid := uint64(0)
 	for {
 		var err error
 		e := &FMEntry{}
 
-		// do we have eid
+		// do we have uid
 		e.HasUID, err = r.ReadBool()
 		if err != nil {
-			return ret, fmt.Errorf("reading new entry eid present bit: %w", err)
+			return ret, fmt.Errorf("reading new entry uid present bit: %w", err)
 		}
 		if e.HasUID {
-			eid, err = r.ReadCompressed()
+			uid, err = r.ReadCompressed()
 			if err != nil {
-				return ret, fmt.Errorf("reading new eid: %w", err)
+				return ret, fmt.Errorf("reading new uid: %w", err)
 			}
 		} else {
-			eid++
+			uid++
 		}
 
 		// is this the end
-		if eid == 16383 {
+		if uid == 16383 {
 			break
 		}
-		e.UID = eid
+		e.UID = uid
 		ret.Entries = append(ret.Entries, e)
 
 		// does it have data
