@@ -47,20 +47,29 @@ type FMEntry struct {
 }
 
 type FMData struct {
-	Unk0 bool
-	Unk1 bool
-	// Unk2        bool
-	// Unk3        uint32
-	// Unk4        bool
-	Unk5       *FMDataUnk5
-	Unk10      uint64 // len of Unk11
-	Unk11      []uint64
-	PosX       float32
-	PosY       float32
-	PosZ       float32
-	EulerBytes uint32
-	Unk13      [7]byte
-	// EnginesData []FMEngineData
+	Unk0        bool
+	Unk1        bool
+	Unk2        bool
+	Unk3        uint32
+	Unk4        bool
+	Unk5        *FMDataUnk5
+	Unk10       uint64 // len of unk11
+	Unk11       []uint64
+	Unk12       uint32
+	PosX        float32
+	PosY        float32
+	PosZ        float32
+	EulerBytes  uint32
+	Unk13       [7]byte
+	EnginesData []FMEngineData
+	SensorsData []FMSensorData
+	SensorsUnk0 byte // only if have sensor data
+	TargetsData []FMTargetData
+	Unk14       bool // have unk15 unk16
+	Unk15       uint32
+	Unk16       uint32
+	Unk17       bool // have unk18
+	Unk18       uint32
 }
 
 type FMDataUnk5 struct {
@@ -147,23 +156,20 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			continue
 		}
 
-		r.IgnoreBits(33)
-		// ed.Unk2, err = r.ReadBool()
-		// if err != nil {
-		// 	return ret, fmt.Errorf("reading unk2: %w", err)
-		// }
-		// ed.Unk3, err = r.ReadU32LE()
-		// if err != nil {
-		// 	return ret, fmt.Errorf("reading unk3: %w", err)
-		// }
+		ed.Unk2, err = r.ReadBool()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk2: %w", err)
+		}
+		ed.Unk3, err = r.ReadU32LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
 
-		r.IgnoreBits(1)
-		// ed.Unk4, err = r.ReadBool()
-		// if err != nil {
-		// 	return ret, fmt.Errorf("reading unk4: %w", err)
-		// }
-		err = ignoreUnk5(r)
-		// ed.Unk5, err = readUnk5(r)
+		ed.Unk4, err = r.ReadBool()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk4: %w", err)
+		}
+		ed.Unk5, err = readUnk5(r)
 		if err != nil {
 			return ret, fmt.Errorf("reading unk5: %w", err)
 		}
@@ -201,11 +207,10 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 		if err != nil {
 			return ret, fmt.Errorf("reading euler bytes: %w", err)
 		}
-		r.IgnoreBits(32)
-		// ed.Unk12, err = r.ReadU32LE()
-		// if err != nil {
-		// 	return ret, fmt.Errorf("reading unk12: %w", err)
-		// }
+		ed.Unk12, err = r.ReadU32LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk12: %w", err)
+		}
 
 		r.AlignToByteBoundary()
 
@@ -214,214 +219,408 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			return ret, fmt.Errorf("reading unk13: %w", err)
 		}
 
-		err = ignoreEngines(r)
+		ed.EnginesData, err = parseEngines(r)
 		if err != nil {
 			return ret, fmt.Errorf("reading engines: %w", err)
 		}
 
-		err = ignoreSensors(r)
+		ed.SensorsData, err = readSensors(r)
 		if err != nil {
 			return ret, fmt.Errorf("reading sensors: %w", err)
 		}
+		if len(ed.SensorsData) > 0 {
+			ed.SensorsUnk0, err = r.ReadByte()
+			if err != nil {
+				return nil, fmt.Errorf("reading sensors unk0: %w", err)
+			}
+		}
 
-		err = ignoreTargets(r)
+		ed.TargetsData, err = readTargets(r)
 		if err != nil {
 			return ret, fmt.Errorf("reading targets: %w", err)
 		}
 
-		unk14, err := r.ReadBit()
+		ed.Unk14, err = r.ReadBit()
 		if err != nil {
 			return ret, fmt.Errorf("reading unk14: %w", err)
 		}
-		if unk14 {
-			r.IgnoreBits(32)
-		}
-
-		unk15, err := r.ReadBit()
-		if err != nil {
-			return ret, fmt.Errorf("reading unk15: %w", err)
-		}
-		if unk15 {
-			unk16, err := r.ReadU32LE()
+		if ed.Unk14 {
+			ed.Unk15, err = r.ReadU32LE()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk15: %w", err)
+			}
+			ed.Unk16, err = r.ReadU32LE()
 			if err != nil {
 				return ret, fmt.Errorf("reading unk16: %w", err)
 			}
-			r.IgnoreBits(int(unk16))
+		}
+
+		ed.Unk17, err = r.ReadBit()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk17: %w", err)
+		}
+		if ed.Unk17 {
+			ed.Unk18, err = r.ReadU32LE()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk18: %w", err)
+			}
+			r.IgnoreBits(int(ed.Unk18))
 		}
 
 	}
 	return ret, nil
 }
 
-func ignoreTargets(r *danet.BitReader) error {
+func readTargets(r *danet.BitReader) ([]FMTargetData, error) {
 	targetsCount := [1]byte{}
 	_, err := r.ReadBitsInto(4, targetsCount[:])
 	if err != nil {
-		return fmt.Errorf("reading count: %w", err)
+		return nil, fmt.Errorf("reading count: %w", err)
 	}
 	if targetsCount[0] > 8 {
-		return fmt.Errorf("targets count > 8 (got %d)", targetsCount[0])
+		return nil, fmt.Errorf("targets count > 8 (got %d)", targetsCount[0])
 	}
+	ret := make([]FMTargetData, targetsCount[0])
 	for i := range targetsCount[0] {
-		err = ignoreTarget(r)
+		ret[i], err = readTarget(r)
 		if err != nil {
-			return fmt.Errorf("reading target %d: %w", i, err)
+			return ret, fmt.Errorf("reading target %d: %w", i, err)
 		}
 	}
-	return nil
+	return ret, nil
 }
 
-func ignoreTarget(r *danet.BitReader) error {
-	r.IgnoreBits(16)
-	unk0, err := r.ReadBit()
+type FMTargetData struct {
+	Unk0  uint8
+	Unk1  uint8
+	Unk2  bool // have unk3
+	Unk3  [3]float32
+	Unk4  bool // unk5 unk6 or unk7 unk8
+	Unk5  [3]float32
+	Unk6  [3]uint16
+	Unk7  [3]float32
+	Unk8  [3]float32
+	Unk9  uint32
+	Unk10 bool
+	Unk11 uint8
+	Unk12 bool
+	Unk13 uint8
+	Unk14 bool
+	Unk15 bool
+	Unk16 bool
+	Unk17 uint8
+}
+
+func readTarget(r *danet.BitReader) (ret FMTargetData, err error) {
+	ret.Unk0, err = r.ReadByte()
 	if err != nil {
-		return fmt.Errorf("reading unk0: %w", err)
+		return ret, fmt.Errorf("reading unk0: %w", err)
 	}
-	if unk0 {
-		r.IgnoreBits(32 * 3)
-	}
-	unk1, err := r.ReadBit()
+	ret.Unk1, err = r.ReadByte()
 	if err != nil {
-		return fmt.Errorf("reading unk1: %w", err)
+		return ret, fmt.Errorf("reading unk1: %w", err)
 	}
-	if unk1 {
-		r.IgnoreBits(32*3 + 16*3)
+	ret.Unk2, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk2: %w", err)
+	}
+	if ret.Unk2 {
+		err = binary.Read(r, binary.LittleEndian, &ret.Unk3)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
+	}
+	ret.Unk4, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk4: %w", err)
+	}
+	if ret.Unk4 {
+		err = binary.Read(r, binary.LittleEndian, &ret.Unk5)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk5: %w", err)
+		}
+		err = binary.Read(r, binary.LittleEndian, &ret.Unk6)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk6: %w", err)
+		}
 	} else {
-		r.IgnoreBits(32 * 6)
+		err = binary.Read(r, binary.LittleEndian, &ret.Unk7)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk7: %w", err)
+		}
+		err = binary.Read(r, binary.LittleEndian, &ret.Unk8)
+		if err != nil {
+			return ret, fmt.Errorf("reading unk8: %w", err)
+		}
 	}
-	r.IgnoreBits(32 + 1 + 8)
-	unk2, err := r.ReadBit()
+	ret.Unk9, err = r.ReadU32LE()
 	if err != nil {
-		return fmt.Errorf("reading unk2: %w", err)
+		return ret, fmt.Errorf("reading unk9: %w", err)
 	}
-	if unk2 {
-		r.IgnoreBits(8)
-	}
-	r.IgnoreBits(1)
-	unk3, err := r.ReadBit()
+	ret.Unk10, err = r.ReadBit()
 	if err != nil {
-		return fmt.Errorf("reading unk3: %w", err)
+		return ret, fmt.Errorf("reading ret.Unk10: %w", err)
 	}
-	r.IgnoreBits(1)
-	if unk3 {
-		r.IgnoreBits(8)
+	ret.Unk11, err = r.ReadByte()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk11: %w", err)
 	}
-	return nil
+	ret.Unk12, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading ret.Unk12: %w", err)
+	}
+	if ret.Unk12 {
+		ret.Unk13, err = r.ReadByte()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk13: %w", err)
+		}
+	}
+	ret.Unk14, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk14: %w", err)
+	}
+	ret.Unk15, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk15: %w", err)
+	}
+	ret.Unk16, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk16: %w", err)
+	}
+	if ret.Unk15 {
+		ret.Unk17, err = r.ReadByte()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk17: %w", err)
+		}
+	}
+	return ret, nil
 }
 
-func ignoreSensors(r *danet.BitReader) error {
+func readSensors(r *danet.BitReader) ([]FMSensorData, error) {
 	sensorCount, err := r.ReadByte()
 	if err != nil {
-		return fmt.Errorf("reading sensor count: %w", err)
+		return nil, fmt.Errorf("reading sensor count: %w", err)
 	}
 	if sensorCount > 4 {
-		return fmt.Errorf("sensor count > 4 (got %d)", sensorCount)
+		return nil, fmt.Errorf("sensor count > 4 (got %d)", sensorCount)
 	}
-	for i := range sensorCount {
-		err = ignoreSensor(r)
+	ret := make([]FMSensorData, sensorCount)
+	for i := range ret {
+		ret[i], err = readSensor(r)
 		if err != nil {
-			return fmt.Errorf("reading sensor %d: %w", i, err)
+			return ret, fmt.Errorf("reading sensor %d: %w", i, err)
 		}
 	}
-	if sensorCount > 0 {
-		r.IgnoreBits(8)
-	}
-	return nil
+	return ret, nil
 }
 
-func ignoreSensor(r *danet.BitReader) error {
-	firstBool, err := r.ReadBit()
+type FMSensorData struct {
+	FirstBool  bool
+	SensorType byte
+	Data1      *FMSensorType1Data
+	Data2      *FMSensorType2Data
+	Data4      *FMSensorType4Data
+	Unk0       bool
+	Unk1       [1]byte
+	Unk2       []uint32
+}
+
+type FMSensorType1Data struct {
+	Unk0 bool
+	Unk1 uint16
+	Unk2 float32
+	Unk3 uint16
+	Unk4 uint16
+	Unk5 uint16
+	Unk6 [4]byte
+	Unk7 bool
+	Unk8 uint8
+}
+
+type FMSensorType2Data struct {
+	Unk0 bool
+	Unk1 uint16
+	Unk2 [12]byte
+	Unk3 [12]byte
+	Unk4 float32
+}
+
+type FMSensorType4Data struct {
+	Unk0 bool
+	Unk1 [12]byte
+}
+
+func readSensor(r *danet.BitReader) (ret FMSensorData, err error) {
+	ret.FirstBool, err = r.ReadBit()
 	if err != nil {
-		return fmt.Errorf("reading first bool: %w", err)
+		return ret, fmt.Errorf("reading first bool: %w", err)
 	}
-	sensorType, err := r.ReadByte()
+	ret.SensorType, err = r.ReadByte()
 	if err != nil {
-		return fmt.Errorf("reading first bool: %w", err)
+		return ret, fmt.Errorf("reading first bool: %w", err)
 	}
-	sensorType >>= 4
-	switch sensorType {
+	switch ret.SensorType >> 4 {
 	case 1:
-		unk0, err := r.ReadBit()
+		ret.Data1 = &FMSensorType1Data{}
+		ret.Data1.Unk0, err = r.ReadBit()
 		if err != nil {
-			return fmt.Errorf("reading sensor type 1 unk0: %w", err)
+			return ret, fmt.Errorf("reading sensor type 1 unk0: %w", err)
 		}
-		if !unk0 {
-			return nil
+		if !ret.Data1.Unk0 {
+			return ret, nil
 		}
-		unk1, err := r.ReadU16LE()
+		ret.Data1.Unk1, err = r.ReadU16LE()
 		if err != nil {
-			return fmt.Errorf("reading sensor type 1 unk1: %w", err)
+			return ret, fmt.Errorf("reading sensor type 1 unk1: %w", err)
 		}
-		r.IgnoreBits(32 + 16*3)
-		if int16(unk1) < 0 {
-			r.IgnoreBits(8)
-		}
-		unk2, err := r.ReadBit()
+		unk2, err := r.ReadU32LE()
 		if err != nil {
-			return fmt.Errorf("reading sensor type 1 unk2: %w", err)
+			return ret, fmt.Errorf("reading sensor type 1 unk2: %w", err)
 		}
-		if unk2 {
-			r.IgnoreBits(8)
+		ret.Data1.Unk2 = math.Float32frombits(unk2)
+		ret.Data1.Unk3, err = r.ReadU16LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 1 unk3: %w", err)
+		}
+		ret.Data1.Unk4, err = r.ReadU16LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 1 unk4: %w", err)
+		}
+		ret.Data1.Unk5, err = r.ReadU16LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 1 unk5: %w", err)
+		}
+		if int16(ret.Data1.Unk1) < 0 {
+			ret.Data1.Unk6[0], err = r.ReadByte()
+			if err != nil {
+				return ret, fmt.Errorf("reading sensor type 1 unk6: %w", err)
+			}
+		}
+		ret.Data1.Unk7, err = r.ReadBit()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 1 unk7: %w", err)
+		}
+		if ret.Data1.Unk7 {
+			ret.Data1.Unk8, err = r.ReadByte()
+			if err != nil {
+				return ret, fmt.Errorf("reading sensor type 1 unk8: %w", err)
+			}
 		}
 	case 2:
-		if !firstBool {
-			return nil
+		if !ret.FirstBool {
+			return
 		}
-		r.IgnoreBits(1 + 16 + 96 + 96 + 32)
+		ret.Data2 = &FMSensorType2Data{}
+		ret.Data2.Unk0, err = r.ReadBit()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 2 unk0: %w", err)
+		}
+		ret.Data2.Unk1, err = r.ReadU16LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 2 unk1: %w", err)
+		}
+		_, err = r.ReadBitsInto(0x60, ret.Data2.Unk2[:])
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 2 unk2: %w", err)
+		}
+		_, err = r.ReadBitsInto(0x60, ret.Data2.Unk3[:])
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 2 unk3: %w", err)
+		}
+		unk4, err := r.ReadU32LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading sensor type 2 unk4: %w", err)
+		}
+		ret.Data2.Unk4 = math.Float32frombits(unk4)
 	case 3:
-		return errors.New("sensor type 3")
+		return ret, errors.New("sensor type 3")
 	case 4:
-		unk0, err := r.ReadBit()
+		ret.Data4 = &FMSensorType4Data{}
+		ret.Data4.Unk0, err = r.ReadBit()
 		if err != nil {
-			return fmt.Errorf("reading sensor type 4 unk0: %w", err)
+			return ret, fmt.Errorf("reading sensor type 4 unk0: %w", err)
 		}
-		if unk0 {
-			r.IgnoreBits(96)
+		if ret.Data4.Unk0 {
+			_, err = r.ReadBitsInto(0x60, ret.Data4.Unk1[:])
+			if err != nil {
+				return ret, fmt.Errorf("reading sensor type 4 unk1: %w", err)
+			}
 		}
 	}
-	unk0, err := r.ReadBit()
+	ret.Unk0, err = r.ReadBit()
 	if err != nil {
-		return fmt.Errorf("reading unk0: %w", err)
+		return ret, fmt.Errorf("reading unk0: %w", err)
 	}
-	if unk0 {
-		unk1 := [1]byte{}
-		_, err := r.ReadBitsInto(6, unk1[:])
+	if ret.Unk0 {
+		_, err := r.ReadBitsInto(6, ret.Unk1[:])
 		if err != nil {
-			return fmt.Errorf("reading unk1: %w", err)
+			return ret, fmt.Errorf("reading unk1: %w", err)
 		}
-		r.IgnoreBits(32 * int(unk1[0]))
-		r.IgnoreBits(6)
+		ret.Unk2 = make([]uint32, ret.Unk1[0])
+		for i := range ret.Unk2 {
+			ret.Unk2[i], err = r.ReadU32LE()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk2 %d/%d: %w", i+1, ret.Unk2, err)
+			}
+		}
 	}
-	return nil
+	return
 }
 
-func ignoreEngines(r *danet.BitReader) error {
+type FMEngineData struct {
+	HasPower          bool
+	Unk0              byte
+	EnginePowerPacked uint16
+	Unk1              bool // have unk2
+	Unk2              byte
+	Unk3              byte
+	Unk4              byte
+}
+
+func parseEngines(r *danet.BitReader) ([]FMEngineData, error) {
 	enginesNum, err := r.ReadByte()
 	if err != nil {
-		return fmt.Errorf("reading engines num: %w", err)
+		return nil, fmt.Errorf("reading engines num: %w", err)
 	}
 	if enginesNum > 0xf {
-		return fmt.Errorf("engines num > 0xf (got %d)", enginesNum)
+		return nil, fmt.Errorf("engines num > 0xf (got %d)", enginesNum)
 	}
-	for range enginesNum {
-		hasPower, err := r.ReadBit()
+	ret := make([]FMEngineData, enginesNum)
+	for i := range ret {
+		ret[i].HasPower, err = r.ReadBit()
 		if err != nil {
-			return fmt.Errorf("reading has engine power: %w", err)
+			return ret, fmt.Errorf("reading has engine power: %w", err)
 		}
-		r.IgnoreBits(8)
-		if hasPower {
-			r.IgnoreBits(16)
-		}
-		unk2Present, err := r.ReadBit()
+		ret[i].Unk0, err = r.ReadByte()
 		if err != nil {
-			return fmt.Errorf("reading unk2 present: %w", err)
+			return ret, fmt.Errorf("reading unk0: %w", err)
 		}
-		if unk2Present {
-			r.IgnoreBits(8)
+		if ret[i].HasPower {
+			ret[i].EnginePowerPacked, err = r.ReadU16LE()
+			if err != nil {
+				return ret, fmt.Errorf("reading engine power: %w", err)
+			}
 		}
-		r.IgnoreBits(16)
+		ret[i].Unk1, err = r.ReadBit()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk2 present: %w", err)
+		}
+		if ret[i].Unk1 {
+			ret[i].Unk2, err = r.ReadByte()
+			if err != nil {
+				return ret, fmt.Errorf("reading unk1: %w", err)
+			}
+		}
+		ret[i].Unk3, err = r.ReadByte()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk2: %w", err)
+		}
+		ret[i].Unk4, err = r.ReadByte()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
+		}
 	}
-	return nil
+	return ret, nil
 }
 
 func readUnk5(r *danet.BitReader) (*FMDataUnk5, error) {
@@ -458,23 +657,6 @@ func readUnk5(r *danet.BitReader) (*FMDataUnk5, error) {
 		}
 	}
 	return nil, nil
-}
-
-func ignoreUnk5(r *danet.BitReader) error {
-	unk5, err := r.ReadBool()
-	if err != nil {
-		return fmt.Errorf("ignoring unk5: %w", err)
-	}
-	if unk5 {
-		r.IgnoreBits(3)
-		bitsetLen := [1]byte{}
-		_, err := r.ReadBitsInto(4, bitsetLen[:])
-		if err != nil {
-			return fmt.Errorf("reading unk5 -> bitsetLen: %w", err)
-		}
-		r.IgnoreBits(int(bitsetLen[0]))
-	}
-	return nil
 }
 
 func unpackEuler(packed uint32) (heading, attitude, bank float32) {
