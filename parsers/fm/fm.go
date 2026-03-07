@@ -112,12 +112,13 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			if err != nil {
 				return ret, fmt.Errorf("reading new uid: %w", err)
 			}
+			uid &= 0x7ff
 		} else {
 			uid++
 		}
 
 		// is this the end
-		if uid == 16383 {
+		if uid == 0x7ff {
 			break
 		}
 		e.UID = uid
