@@ -108,11 +108,12 @@ func BoolListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err erro
 }
 
 func readPartId(r *danet.BitReader) (PartId, error) {
-	out, err := r.ReadBits(6)
+	rb := [1]byte{}
+	_, err := r.ReadBitsInto(6, rb[:])
 	if err != nil {
 		return 0, err
 	}
-	return PartId(out[0]), nil
+	return PartId(rb[0]), nil
 }
 
 func DmPartIdParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -195,11 +196,12 @@ func read_istring(r *danet.BitReader, ctx *PacketECSParser) (ret string, err err
 	if rawString {
 		return read_string(r, ctx)
 	}
-	str_index_bytes, err := r.ReadBits(OBJECT_KEY_BITS)
+	str_index_bytes := [2]byte{}
+	_, err = r.ReadBitsInto(OBJECT_KEY_BITS, str_index_bytes[:])
 	if err != nil {
 		return "", err
 	}
-	strIndex := binary.LittleEndian.Uint16(str_index_bytes)
+	strIndex := binary.LittleEndian.Uint16(str_index_bytes[:])
 	str, exists := ctx.InternedStrings[strIndex]
 	if !exists {
 		str, err := read_string(r, ctx)
@@ -250,31 +252,34 @@ func TransformParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err err
 		return nil, err
 	}
 	if isOrthoUni {
-		_, err := r.ReadBits(62)
-		if err != nil {
-			return nil, err
-		}
+		r.IgnoreBits(62)
+		// _, err := r.ReadBits(62)
+		// if err != nil {
+		// 	return nil, err
+		// }
 		hasScale, err := ReadBool(r, ctx)
 		if err != nil {
 			return nil, err
 		}
 		if hasScale {
-			_, err = r.ReadBits(4 * 8)
-			if err != nil {
-				return nil, err
-			}
+			r.IgnoreBits(4 * 8)
+			// _, err = r.ReadBits(4 * 8)
+			// if err != nil {
+			// 	return nil, err
+			// }
 		}
-
 	} else {
-		_, err = r.ReadBits(4 * 9 * 8)
-		if err != nil {
-			return nil, err
-		}
+		r.IgnoreBits(4 * 9 * 8)
+		// _, err = r.ReadBits(4 * 9 * 8)
+		// if err != nil {
+		// 	return nil, err
+		// }
 	}
-	_, err = r.ReadBits(4 * 3 * 8)
-	if err != nil {
-		return nil, err
-	}
+	r.IgnoreBits(4 * 3 * 8)
+	// _, err = r.ReadBits(4 * 3 * 8)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	var n TMatrix // empty matrix :(
 	return n, nil
 }
@@ -319,14 +324,13 @@ func RendInstSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err 
 	var handle riex_handle_t
 	var riType uint32
 	var riInst uint32
-	var word24 uint32
-	err = binary.Read(r, binary.LittleEndian, &word24)
+	word24, err := r.ReadU32LE()
 	if err != nil {
 		return nil, err
 	}
 	if word24&(1<<ri_inst_total_bits) > 0 {
 		riInst = word24 & ((1 << ri_inst_total_bits) - 1)
-		err = binary.Read(r, binary.LittleEndian, &riType)
+		riType, err = r.ReadU32LE()
 		if err != nil {
 			return nil, err
 		}
@@ -359,10 +363,11 @@ func RocketSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.ReadBits(792)
-	if err != nil {
-		return nil, err
-	}
+	r.IgnoreBits(792)
+	// _, err = r.ReadBits(792)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	temp1, err := r.ReadBytes(2)
 	if err != nil {
@@ -386,10 +391,11 @@ func RocketSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 		return nil, err
 	}
 
-	_, err = r.ReadBits(112)
-	if err != nil {
-		return nil, err
-	}
+	r.IgnoreBits(112)
+	// _, err = r.ReadBits(112)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	var rocket Rocket
 	return rocket, nil

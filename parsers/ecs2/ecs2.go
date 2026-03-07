@@ -344,11 +344,10 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 }
 
 func deserialize_child_component(r *danet.BitReader, mgr *PacketECSParser) (ret *Component, err error) {
-	var type_id ComponentHash
-	err = binary.Read(r, binary.LittleEndian, &type_id)
+	type_id, err := r.ReadU32LE()
 	if err != nil {
 		return nil, err
 	}
-	ret, err = deserialize_init_component_typeless(r, mgr, type_id, 0)
+	ret, err = deserialize_init_component_typeless(r, mgr, ComponentHash(type_id), 0)
 	return ret, err
 }
