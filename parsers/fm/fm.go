@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"main/parsers/ecs2"
 	"math"
-	"slices"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
@@ -41,9 +41,11 @@ type FMUpdatePacket struct {
 }
 
 type FMEntry struct {
-	HasUID bool
-	UID    uint64
-	Data   *FMData
+	BlobOffset int
+	BlobSize   int
+	HasUID     bool
+	UID        uint64
+	Data       *FMData
 }
 
 type FMData struct {
@@ -66,8 +68,8 @@ type FMData struct {
 	SensorsUnk0 byte // only if have sensor data
 	TargetsData []FMTargetData
 	Unk14       bool // have unk15 unk16
-	Unk15       uint32
-	Unk16       uint32
+	Unk15       uint16
+	Unk16       uint16
 	Unk17       bool // have unk18
 	Unk18       uint32
 }
@@ -82,19 +84,31 @@ type FMDataUnk5 struct {
 func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 	ret, err := p.Parse2(pk)
 	if p.KeepResults {
-		p.Results = append(p.Results, packet.ParsedPacket{
-			Packet: packet.Packet{
-				Seq:           pk.Seq,
-				CurrentTime:   pk.CurrentTime,
-				PacketType:    2,
-				PacketPayload: ret.Rem,
-			},
-			ParsersResults: []packet.ParserResult{{
-				Parser: "fm",
-				Data:   ret,
-				Err:    err,
-			}},
-		})
+		for _, e := range ret.Entries {
+			blobReader := &danet.BitReader{
+				Data:      pk.PacketPayload,
+				BitOffset: e.BlobOffset,
+			}
+			var blob []byte
+			if e.BlobSize == 0 {
+				blob, _ = io.ReadAll(blobReader)
+			} else {
+				blob, _ = blobReader.ReadBits(e.BlobSize)
+			}
+			p.Results = append(p.Results, packet.ParsedPacket{
+				Packet: packet.Packet{
+					Seq:           pk.Seq,
+					CurrentTime:   pk.CurrentTime,
+					PacketType:    2,
+					PacketPayload: blob,
+				},
+				ParsersResults: []packet.ParserResult{{
+					Parser: "fm",
+					Data:   e,
+					Err:    err,
+				}},
+			})
+		}
 	}
 	return ret, err
 }
@@ -102,14 +116,16 @@ func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, error) {
 	ret := &FMUpdatePacket{}
 	r := danet.NewBitReader(pk.PacketPayload)
-	defer func() {
-		// ret.Rem, _ = io.ReadAll(r)
-		slices.Reverse(ret.Entries)
-	}()
 	uid := uint64(0)
 	for {
+
+		if len(ret.Entries) > 0 {
+			ret.Entries[len(ret.Entries)-1].BlobSize = r.BitOffset - ret.Entries[len(ret.Entries)-1].BlobOffset
+		}
 		var err error
-		e := &FMEntry{}
+		e := &FMEntry{
+			BlobOffset: r.BitOffset,
+		}
 
 		// do we have uid
 		e.HasUID, err = r.ReadBool()
@@ -245,11 +261,11 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			return ret, fmt.Errorf("reading unk14: %w", err)
 		}
 		if ed.Unk14 {
-			ed.Unk15, err = r.ReadU32LE()
+			ed.Unk15, err = r.ReadU16LE()
 			if err != nil {
 				return ret, fmt.Errorf("reading unk15: %w", err)
 			}
-			ed.Unk16, err = r.ReadU32LE()
+			ed.Unk16, err = r.ReadU16LE()
 			if err != nil {
 				return ret, fmt.Errorf("reading unk16: %w", err)
 			}
@@ -300,9 +316,9 @@ type FMTargetData struct {
 	Unk6  [3]uint16
 	Unk7  [3]float32
 	Unk8  [3]float32
-	Unk9  uint32
+	Unk9  float32
 	Unk10 bool
-	Unk11 uint8
+	Unk11 bool
 	Unk12 bool
 	Unk13 uint8
 	Unk14 bool
@@ -353,21 +369,22 @@ func readTarget(r *danet.BitReader) (ret FMTargetData, err error) {
 			return ret, fmt.Errorf("reading unk8: %w", err)
 		}
 	}
-	ret.Unk9, err = r.ReadU32LE()
+	unk9, err := r.ReadU32LE()
 	if err != nil {
 		return ret, fmt.Errorf("reading unk9: %w", err)
 	}
+	ret.Unk9 = math.Float32frombits(unk9)
 	ret.Unk10, err = r.ReadBit()
 	if err != nil {
-		return ret, fmt.Errorf("reading ret.Unk10: %w", err)
+		return ret, fmt.Errorf("reading unk10: %w", err)
 	}
-	ret.Unk11, err = r.ReadByte()
+	ret.Unk11, err = r.ReadBit()
 	if err != nil {
 		return ret, fmt.Errorf("reading unk11: %w", err)
 	}
 	ret.Unk12, err = r.ReadBit()
 	if err != nil {
-		return ret, fmt.Errorf("reading ret.Unk12: %w", err)
+		return ret, fmt.Errorf("reading unk12: %w", err)
 	}
 	if ret.Unk12 {
 		ret.Unk13, err = r.ReadByte()
