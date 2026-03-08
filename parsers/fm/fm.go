@@ -41,11 +41,12 @@ type FMUpdatePacket struct {
 }
 
 type FMEntry struct {
-	BlobOffset int
-	BlobSize   int
-	HasUID     bool
-	UID        uint64
-	Data       *FMData
+	BlobOffset     int
+	BlobSize       int
+	HasUID         bool
+	UID            uint64
+	ResolvedEntity *ecs2.Entity
+	Data           *FMData
 }
 
 type FMData struct {
@@ -147,6 +148,11 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 			break
 		}
 		e.UID = uid
+
+		if p.ECS != nil {
+			e.ResolvedEntity = p.ECS.Uid_lookup[int32(uid)]
+		}
+
 		ret.Entries = append(ret.Entries, e)
 
 		// does it have data
