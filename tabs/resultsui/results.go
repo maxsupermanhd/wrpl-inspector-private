@@ -1,14 +1,19 @@
 package resultsui
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/AllenDang/cimgui-go/imgui"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector/imui"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 )
 
 type ResultsTab struct {
-	raw map[string]any
+	raw     map[string]any
+	rawJSON string
+	rawSPEW string
 }
 
 func NewResultsTab(resultsBlkBytes []byte) (*ResultsTab, error) {
@@ -22,8 +27,16 @@ func NewResultsTab(resultsBlkBytes []byte) (*ResultsTab, error) {
 		return nil, err
 	}
 
+	rawJSONb, err := json.MarshalIndent(raw, "", "\t")
+	rawJSON := string(rawJSONb)
+	if err != nil {
+		rawJSON = err.Error()
+	}
+
 	return &ResultsTab{
-		raw: raw,
+		raw:     raw,
+		rawJSON: rawJSON,
+		rawSPEW: spew.Sdump(raw),
 	}, nil
 }
 
@@ -100,6 +113,25 @@ func (tab *ResultsTab) Init() {
 */
 
 func (tab ResultsTab) Run() {
+
+	if imgui.BeginTabBar("results view type") {
+		if imgui.BeginTabItem("ingame") {
+			tab.RunIngame()
+			imgui.EndTabItem()
+		}
+		if imgui.BeginTabItem("json") {
+			imgui.InputTextMultiline("##basictext", &tab.rawJSON, imgui.ContentRegionAvail(), imgui.InputTextFlagsReadOnly, imui.ImEmptyInputCallback)
+			imgui.EndTabItem()
+		}
+		if imgui.BeginTabItem("spew") {
+			imgui.InputTextMultiline("##basictext", &tab.rawSPEW, imgui.ContentRegionAvail(), imgui.InputTextFlagsReadOnly, imui.ImEmptyInputCallback)
+			imgui.EndTabItem()
+		}
+		imgui.EndTabBar()
+	}
+}
+
+func (tab ResultsTab) RunIngame() {
 	teams := [][]map[string]any{{}, {}}
 	playersAny, ok := tab.raw["player"].([]any)
 	if !ok {
