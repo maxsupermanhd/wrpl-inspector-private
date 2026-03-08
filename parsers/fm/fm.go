@@ -440,6 +440,7 @@ type FMSensorData struct {
 	Unk0       bool
 	Unk1       [1]byte
 	Unk2       []uint32
+	Unk3       [1]byte
 }
 
 type FMSensorType1Data struct {
@@ -579,6 +580,10 @@ func readSensor(r *danet.BitReader) (ret FMSensorData, err error) {
 			if err != nil {
 				return ret, fmt.Errorf("reading unk2 %d/%d: %w", i+1, ret.Unk2, err)
 			}
+		}
+		_, err = r.ReadBitsInto(6, ret.Unk3[:])
+		if err != nil {
+			return ret, fmt.Errorf("reading unk3: %w", err)
 		}
 	}
 	return
