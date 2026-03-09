@@ -9,6 +9,7 @@ import (
 	"main/parsers/fm"
 	"main/parsers/kills2"
 	"main/parsers/paths"
+	"main/parsers/severe"
 	"main/parsers/slot2"
 	"main/tabs/bitshiftui"
 	ecsui2 "main/tabs/ecsui"
@@ -80,6 +81,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		fmp,
 		// &mpiparser.MPIStuffParser{},
 		&critical.CriticalDamageParser{ECS: &ecs.Mgr},
+		&severe.SevereDamageParser{ECS: &ecs.Mgr},
 	}
 	streams := []packet.PacketStreamProvider{ecs, slot, fmp}
 	tabs := []inspector.Tab{}

@@ -1,0 +1,81 @@
+package severe
+
+import (
+	"encoding/binary"
+	"main/idfieldserializer"
+	"main/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
+)
+
+type SevereDamageParser struct {
+	ECS *ecs2.EntityManager
+}
+
+func (p *SevereDamageParser) Name() string {
+	return "severe"
+}
+
+func (p *SevereDamageParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
+	return map[byte][][]packet.ParsingCondition{
+		4: {{
+			packet.NewParsingCondition(0, 0x02),
+			packet.NewParsingCondition(1, 0x58),
+			packet.NewParsingCondition(2, 0x57),
+			packet.NewParsingCondition(3, 0xf1),
+		}},
+	}
+}
+
+type CriticalDamagePacket struct {
+	Seq         uint64
+	CurrentTime uint32
+
+	OffendedUID    uint16
+	OffendedEntity *ecs2.Entity
+	PlayerPID      uint32
+	Vehicle        string
+	PlayerUID      uint16
+	PlayerEntity   *ecs2.Entity
+	Unk0           byte
+}
+
+func (p *SevereDamageParser) Parse(pk *packet.Packet) (any, error) {
+	ret := CriticalDamagePacket{
+		Seq:         pk.Seq,
+		CurrentTime: pk.CurrentTime,
+	}
+	r := danet.NewBitReader(pk.PacketPayload[4:])
+	err := idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8, _ uint32) error {
+		var err error
+		switch fieldNum {
+		case 1:
+			err = binary.Read(r, binary.LittleEndian, &ret.OffendedUID)
+			if err != nil {
+				return err
+			}
+			if p.ECS != nil {
+				ret.OffendedEntity = p.ECS.Uid_lookup[int32(ret.OffendedUID&0x7FF)]
+			}
+		case 2:
+			return binary.Read(r, binary.LittleEndian, &ret.PlayerPID)
+		case 3:
+			return r.ReadLenStrInto(&ret.Vehicle)
+		case 4:
+			err = binary.Read(r, binary.LittleEndian, &ret.PlayerUID)
+			if err != nil {
+				return err
+			}
+			if p.ECS != nil {
+				ret.PlayerEntity = p.ECS.Uid_lookup[int32(ret.OffendedUID&0x7FF)]
+			}
+		case 5:
+			ret.Unk0, err = r.ReadByte()
+		default:
+			return idfieldserializer.ErrSkipField
+		}
+		return err
+	})
+	return ret, err
+}
