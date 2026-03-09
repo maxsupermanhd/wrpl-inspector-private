@@ -47,6 +47,16 @@ func assembleDamage(
 		if d.PlayerEntity != nil {
 			entry.OffenderID, entry.OffenderModel = resolveEntityDetails(players, d.PlayerEntity)
 			entry.OffenderEntityIndex = resolveEntityToEntityIndex(ecs.Entities, d.PlayerEntity)
+		} else {
+			entry.OffenderModel = d.Vehicle
+			if d.PlayerPID >= uint32(len(players)) {
+				continue
+			}
+			player := players[d.PlayerPID]
+			if player == nil {
+				continue
+			}
+			entry.OffenderID = uint64(player.UserID)
 		}
 		ret = append(ret, entry)
 	}
