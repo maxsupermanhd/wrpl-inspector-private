@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"main/game"
+	"main/parsers/critical"
 	"main/parsers/ecs2"
 	"main/parsers/fm"
 	"main/parsers/kills2"
 	nextsegmentparser "main/parsers/nextsegment"
 	"main/parsers/paths"
+	"main/parsers/severe"
 	"main/parsers/slot2"
 	"maps"
 	"slices"
@@ -35,11 +37,12 @@ type CarvedReplay struct {
 	Mission    MissionDefinition
 	Difficulty byte
 
-	GameDuration float64
-	TeamWon      byte
-	Players      []SessionPlayer
-	Kills        []SessionKill
-	Awards       []SessionAward
+	GameDuration  float64
+	TeamWon       byte
+	Players       []SessionPlayer
+	Kills         []SessionKill
+	Awards        []SessionAward
+	DamageReports []SessionDamage
 
 	Entities    []SessionEntity
 	CarveErrors []error
@@ -86,6 +89,23 @@ type SessionKill struct {
 	VictimID       uint64
 	VictimModel    string
 	VictimPosition *game.SpaceTime
+}
+
+type DamageVariant byte
+
+const (
+	DamageVariantCritical DamageVariant = iota
+	DamageVariantSevere
+)
+
+type SessionDamage struct {
+	Time          uint32
+	Variant       DamageVariant
+	OffenderID    uint64
+	OffenderModel string
+	OffendedID    uint64
+	OffendedModel string
+	CausedFire    bool `json:",omitempty"`
 }
 
 type SessionAward struct {
@@ -136,7 +156,9 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	fmp := &fm.PacketFlightModelParser{KeepResults: true, ECS: &ecsp.Mgr}
 	kills := &kills2.PacketKillParser{KeepKills: true, ECS: &ecsp.Mgr, PathsGround: prp, PathsAir: fmp}
 	sltp := &slot2.PacketSlotParser{}
-	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp})
+	dcp := &critical.CriticalDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
+	dsp := &severe.SevereDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
+	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp, dcp, dsp})
 	for parti, part := range parts {
 		r := packet.NewPacketStreamReader(readers[part].PacketStream)
 		pk := &packet.Packet{}
@@ -403,6 +425,88 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 		}
 		ret.Kills = append(ret.Kills, entry)
 	}
+	for _, d := range dcp.Results {
+		entry := SessionDamage{
+			Time:       d.CurrentTime,
+			Variant:    DamageVariantCritical,
+			CausedFire: d.Fire,
+		}
+		if d.OffendedEntity != nil {
+			entry.OffendedModel, _ = ecs2.GetObjectData[string](&d.OffendedEntity.Data, "unit__className")
+			victimID, _ := ecs2.GetObjectData[int32](&d.OffendedEntity.Data, "unit__playerId")
+			if victimID < 0 || victimID >= int32(len(sltp.Players)) {
+				log.Warn().Msgf("oob unit__playerId??? %d", victimID)
+				continue
+			} else {
+				p := sltp.Players[victimID]
+				if p == nil {
+					log.Warn().Msgf("nil player %d", victimID)
+					continue
+				} else {
+					entry.OffendedID = uint64(p.UserID)
+				}
+			}
+		}
+		if d.PlayerEntity != nil {
+			entry.OffenderModel, _ = ecs2.GetObjectData[string](&d.PlayerEntity.Data, "unit__className")
+			victimID, _ := ecs2.GetObjectData[int32](&d.PlayerEntity.Data, "unit__playerId")
+			if victimID < 0 || victimID >= int32(len(sltp.Players)) {
+				log.Warn().Msgf("oob unit__playerId??? %d", victimID)
+				continue
+			} else {
+				p := sltp.Players[victimID]
+				if p == nil {
+					log.Warn().Msgf("nil player %d", victimID)
+					continue
+				} else {
+					entry.OffenderID = uint64(p.UserID)
+				}
+			}
+		}
+		ret.DamageReports = append(ret.DamageReports, entry)
+	}
+	for _, d := range dsp.Results {
+		entry := SessionDamage{
+			Time:    d.CurrentTime,
+			Variant: DamageVariantSevere,
+		}
+		if d.OffendedEntity != nil {
+			entry.OffendedModel, _ = ecs2.GetObjectData[string](&d.OffendedEntity.Data, "unit__className")
+			victimID, _ := ecs2.GetObjectData[int32](&d.OffendedEntity.Data, "unit__playerId")
+			if victimID < 0 || victimID >= int32(len(sltp.Players)) {
+				log.Warn().Msgf("oob unit__playerId??? %d", victimID)
+				continue
+			} else {
+				p := sltp.Players[victimID]
+				if p == nil {
+					log.Warn().Msgf("nil player %d", victimID)
+					continue
+				} else {
+					entry.OffendedID = uint64(p.UserID)
+				}
+			}
+		}
+		if d.PlayerEntity != nil {
+			entry.OffenderModel, _ = ecs2.GetObjectData[string](&d.PlayerEntity.Data, "unit__className")
+			victimID, _ := ecs2.GetObjectData[int32](&d.PlayerEntity.Data, "unit__playerId")
+			if victimID < 0 || victimID >= int32(len(sltp.Players)) {
+				log.Warn().Msgf("oob unit__playerId??? %d", victimID)
+				continue
+			} else {
+				p := sltp.Players[victimID]
+				if p == nil {
+					log.Warn().Msgf("nil player %d", victimID)
+					continue
+				} else {
+					entry.OffenderID = uint64(p.UserID)
+				}
+			}
+		}
+		ret.DamageReports = append(ret.DamageReports, entry)
+	}
+	slices.SortFunc(ret.DamageReports, func(a, b SessionDamage) int {
+		return int(a.Time) - int(b.Time)
+	})
 	return ret, nil
 }
 
