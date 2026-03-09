@@ -113,7 +113,8 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			LevelSettings: carveHeaderString(readers[parts[0]].Header.Raw_LevelSettings[:]),
 			BattleType:    carveHeaderString(readers[parts[0]].Header.Raw_BattleType[:]),
 		},
-		Difficulty: readers[parts[0]].Header.Difficulty,
+		Difficulty:  readers[parts[0]].Header.Difficulty,
+		CarveErrors: []error{},
 	}
 	for parti, part := range parts {
 		r := packet.NewPacketStreamReader(readers[part].PacketStream)
