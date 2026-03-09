@@ -80,7 +80,7 @@ func assemblePlayers(results map[string]any, slots [256]*slot2.Player) (ret []Se
 				continue
 			}
 
-			player.SessionPlayerPerformance.SquadID = int(getMapStringAnyValue(r2, int64(-1), "squadID"))
+			player.SessionPlayerPerformance.SquadID = int(getMapStringAnyValue(r2, int64(-1), "squadId"))
 			player.SessionPlayerPerformance.AutoSquad = getMapStringAnyValue(r2, false, "autoSquad")
 			player.SessionPlayerPerformance.Deaths = int(getMapStringAnyValue(r2, int64(-1), "deaths"))
 			player.SessionPlayerPerformance.AiGroundKills = int(getMapStringAnyValue(r2, int64(-1), "aiGroundKills"))
