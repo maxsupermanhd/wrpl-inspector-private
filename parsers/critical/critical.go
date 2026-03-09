@@ -71,7 +71,7 @@ func (p *CriticalDamageParser) Parse(pk *packet.Packet) (any, error) {
 				return err
 			}
 			if p.ECS != nil {
-				ret.PlayerEntity = p.ECS.Uid_lookup[int32(ret.OffendedUID&0x7FF)]
+				ret.PlayerEntity = p.ECS.Uid_lookup[int32(ret.PlayerUID&0x7FF)]
 			}
 		case 5:
 			return r.ReadBoolInto(&ret.Fire)
