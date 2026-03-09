@@ -55,19 +55,22 @@ func main() {
 }
 
 func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []inspector.Tab) {
-	paths := paths.NewPositionRetainerParser()
 	ecs := ecs2.NewPacketECSParser(*chms)
+	paths := paths.NewPositionRetainerParser()
+	fmp := &fm.PacketFlightModelParser{
+		KeepResults:     true,
+		MakeDebugStream: true,
+		ECS:             &ecs.Mgr,
+	}
 	slot := &slot2.PacketSlotParser{KeepMessages: true}
 	kills := &kills2.PacketKillParser{
-		KeepKills: true,
-		ECS:       &ecs.Mgr,
-		Paths:     paths,
+		KeepKills:   true,
+		ECS:         &ecs.Mgr,
+		PathsGround: paths,
+		PathsAir:    fmp,
 	}
 	cameraAngles := &cameraanglesparser.PacketCameraAnglesParser{
 		Data: map[uint64][]cameraanglesparser.CameraAnglesData{},
-	}
-	fmp := &fm.PacketFlightModelParser{
-		KeepResults: true,
 	}
 	parsers := []packet.PacketParser{
 		kills, ecs, slot, paths,

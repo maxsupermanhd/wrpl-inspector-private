@@ -13,9 +13,11 @@ import (
 )
 
 type PacketFlightModelParser struct {
-	ECS         *ecs2.EntityManager
-	KeepResults bool
-	Results     []packet.ParsedPacket
+	ECS             *ecs2.EntityManager
+	KeepResults     bool
+	Results         []FMUpdatePacket
+	MakeDebugStream bool
+	DebugStream     []packet.ParsedPacket
 }
 
 func (p *PacketFlightModelParser) Name() string {
@@ -30,14 +32,14 @@ func (p *PacketFlightModelParser) ParsesMatching() map[byte][][]packet.ParsingCo
 
 func (p *PacketFlightModelParser) GetPacketStreams() []packet.ParsedPacketStream {
 	return []packet.ParsedPacketStream{{
-		Name:    "rem",
-		Packets: p.Results,
+		Name:    "debug stream",
+		Packets: p.DebugStream,
 	}}
 }
 
 type FMUpdatePacket struct {
-	Rem     []byte
-	Entries []*FMEntry
+	CurrentTime uint32
+	Entries     []*FMEntry
 }
 
 type FMEntry struct {
@@ -84,7 +86,10 @@ type FMDataUnk5 struct {
 
 func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 	ret, err := p.Parse2(pk)
-	if p.KeepResults {
+	if p.KeepResults && ret != nil {
+		p.Results = append(p.Results, *ret)
+	}
+	if p.MakeDebugStream {
 		for _, e := range ret.Entries {
 			blobReader := &danet.BitReader{
 				Data:      pk.PacketPayload,
@@ -96,7 +101,7 @@ func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 			} else {
 				blob, _ = blobReader.ReadBits(e.BlobSize)
 			}
-			p.Results = append(p.Results, packet.ParsedPacket{
+			p.DebugStream = append(p.DebugStream, packet.ParsedPacket{
 				Packet: packet.Packet{
 					Seq:           pk.Seq,
 					CurrentTime:   pk.CurrentTime,
@@ -115,7 +120,9 @@ func (p *PacketFlightModelParser) Parse(pk *packet.Packet) (any, error) {
 }
 
 func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, error) {
-	ret := &FMUpdatePacket{}
+	ret := &FMUpdatePacket{
+		CurrentTime: pk.CurrentTime,
+	}
 	r := danet.NewBitReader(pk.PacketPayload)
 	uid := uint64(0)
 	for {

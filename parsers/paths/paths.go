@@ -2,26 +2,20 @@ package paths
 
 import (
 	"encoding/binary"
+	"main/game"
 	"math"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 )
 
-type SpaceTime struct {
-	Time uint32
-	X    int64
-	Y    int64
-	Z    int64
-}
-
 type PositionRetainerParser struct {
-	Paths map[uint64][]SpaceTime
+	Paths map[uint64][]game.SpaceTime
 }
 
 func NewPositionRetainerParser() *PositionRetainerParser {
 	return &PositionRetainerParser{
-		Paths: map[uint64][]SpaceTime{},
+		Paths: map[uint64][]game.SpaceTime{},
 	}
 }
 
@@ -51,20 +45,12 @@ func (p *PositionRetainerParser) Parse(pk *packet.Packet) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	st := SpaceTime{
+	st := game.SpaceTime{
 		Time: pk.CurrentTime,
-		X:    int64(math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[14:]))),
-		Y:    int64(math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[22:]))),
-		Z:    int64(math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[30:]))),
+		X:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[14:])),
+		Y:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[22:])),
+		Z:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[30:])),
 	}
 	p.Paths[eid] = append(p.Paths[eid], st)
-	return nil, nil
-}
-
-func (p *PositionRetainerParser) LastPosition(eid uint64) *SpaceTime {
-	s := p.Paths[eid]
-	if len(s) == 0 {
-		return nil
-	}
-	return &s[len(s)-1]
+	return st, nil
 }

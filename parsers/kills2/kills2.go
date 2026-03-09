@@ -3,8 +3,10 @@ package kills2
 import (
 	"encoding/binary"
 	"fmt"
+	"main/game"
 	"main/idfieldserializer"
 	"main/parsers/ecs2"
+	"main/parsers/fm"
 	"main/parsers/paths"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
@@ -18,12 +20,12 @@ type KillEntry struct {
 	KillerPid              uint32
 	KillerUid              uint16
 	ResolvedKiller         *ecs2.Entity
-	ResolvedKillerPosition *paths.SpaceTime
+	ResolvedKillerPosition *game.SpaceTime
 
 	VictimPid              uint32
 	VictimUid              uint16
 	ResolvedVictim         *ecs2.Entity
-	ResolvedVictimPosition *paths.SpaceTime
+	ResolvedVictimPosition *game.SpaceTime
 
 	PlayerVehicle   string
 	PlayerWeapon    string
@@ -31,10 +33,11 @@ type KillEntry struct {
 }
 
 type PacketKillParser struct {
-	KeepKills bool
-	Kills     []KillEntry
-	ECS       *ecs2.EntityManager
-	Paths     *paths.PositionRetainerParser
+	KeepKills   bool
+	Kills       []KillEntry
+	ECS         *ecs2.EntityManager
+	PathsGround *paths.PositionRetainerParser
+	PathsAir    *fm.PacketFlightModelParser
 }
 
 func (p *PacketKillParser) Name() string {
@@ -77,8 +80,8 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 					return fmt.Errorf("failed to resolve victim uid %v", parsed.VictimUid)
 				}
 				parsed.ResolvedVictim = resolved
-				if p.Paths != nil {
-					for eid, pv := range p.Paths.Paths {
+				if p.PathsGround != nil {
+					for eid, pv := range p.PathsGround.Paths {
 						eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
 						eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
 						e := p.ECS.Entities[uint32(eid2)]
@@ -90,6 +93,28 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 						}
 						parsed.ResolvedVictimPosition = &pv[len(pv)-1]
 						break
+					}
+				}
+				if p.PathsAir != nil && len(p.PathsAir.Results) > 0 {
+					for _, e := range p.PathsAir.Results[len(p.PathsAir.Results)-1].Entries {
+						if e.UID == uint64(parsed.VictimUid) && e.Data != nil {
+							t := p.PathsAir.Results[len(p.PathsAir.Results)-1].CurrentTime
+							if parsed.ResolvedVictimPosition == nil {
+								parsed.ResolvedVictimPosition = &game.SpaceTime{
+									Time: t,
+									X:    float64(e.Data.PosX),
+									Y:    float64(e.Data.PosY),
+									Z:    float64(e.Data.PosZ),
+								}
+							} else if parsed.ResolvedVictimPosition.Time < t {
+								parsed.ResolvedVictimPosition = &game.SpaceTime{
+									Time: t,
+									X:    float64(e.Data.PosX),
+									Y:    float64(e.Data.PosY),
+									Z:    float64(e.Data.PosZ),
+								}
+							}
+						}
 					}
 				}
 			}
@@ -105,8 +130,8 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 					return fmt.Errorf("failed to resolve killer uid %v", parsed.KillerUid)
 				}
 				parsed.ResolvedKiller = resolved
-				if p.Paths != nil {
-					for eid, pv := range p.Paths.Paths {
+				if p.PathsGround != nil {
+					for eid, pv := range p.PathsGround.Paths {
 						eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
 						eid2 = uint64(ecs2.EntityID(uint32(eid2)).Index())
 						e := p.ECS.Entities[uint32(eid2)]
@@ -118,6 +143,28 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 						}
 						parsed.ResolvedKillerPosition = &pv[len(pv)-1]
 						break
+					}
+				}
+				if p.PathsAir != nil && len(p.PathsAir.Results) > 0 {
+					for _, e := range p.PathsAir.Results[len(p.PathsAir.Results)-1].Entries {
+						if e.UID == uint64(parsed.KillerUid) && e.Data != nil {
+							t := p.PathsAir.Results[len(p.PathsAir.Results)-1].CurrentTime
+							if parsed.ResolvedKillerPosition == nil {
+								parsed.ResolvedKillerPosition = &game.SpaceTime{
+									Time: t,
+									X:    float64(e.Data.PosX),
+									Y:    float64(e.Data.PosY),
+									Z:    float64(e.Data.PosZ),
+								}
+							} else if parsed.ResolvedKillerPosition.Time < t {
+								parsed.ResolvedKillerPosition = &game.SpaceTime{
+									Time: t,
+									X:    float64(e.Data.PosX),
+									Y:    float64(e.Data.PosY),
+									Z:    float64(e.Data.PosZ),
+								}
+							}
+						}
 					}
 				}
 			}

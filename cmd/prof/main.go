@@ -3,21 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	cameraanglesparser "main/parsers/cameraAnglesParser"
-	"main/parsers/critical"
+	"main/carve"
 	"main/parsers/ecs2"
-	"main/parsers/fm"
-	"main/parsers/kills2"
-	"main/parsers/paths"
-	"main/parsers/slot2"
 	"os"
 	"runtime/pprof"
 	"time"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
-	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
-	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
-	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
 )
 
 func main() {
@@ -37,30 +29,7 @@ func main() {
 		perfTime := time.Now()
 		rr := noerr(wrpl.OpenReplay(bytes.NewReader(replayBytes), true, true, true))
 		defer rr.Close()
-		paths := paths.NewPositionRetainerParser()
-		ecs := ecs2.NewPacketECSParser(*chms)
-		slot := &slot2.PacketSlotParser{KeepMessages: true}
-		kills := &kills2.PacketKillParser{
-			KeepKills: true,
-			ECS:       &ecs.Mgr,
-			Paths:     paths,
-		}
-		cameraAngles := &cameraanglesparser.PacketCameraAnglesParser{
-			Data: map[uint64][]cameraanglesparser.CameraAnglesData{},
-		}
-		fmp := &fm.PacketFlightModelParser{
-			KeepResults: true,
-		}
-		parsers := []packet.PacketParser{
-			kills, ecs, slot, paths,
-			&packetchat.PacketChatParser{},
-			&packetaward.PacketAwardParser{},
-			cameraAngles,
-			fmp,
-			// &mpiparser.MPIStuffParser{},
-			&critical.CriticalDamageParser{ECS: &ecs.Mgr},
-		}
-		noerr(packet.ParsePacketsStreamed(packet.NewPacketStreamReader(rr.PacketStream), parsers))
+		noerr(carve.CarveReplay(map[int]*wrpl.ReplayReader{0: rr}, *chms))
 		perfDur := time.Since(perfTime)
 		perfSum += perfDur
 		fmt.Println(perfDur, perfSum/time.Duration(i+1))

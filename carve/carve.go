@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"main/game"
 	"main/parsers/ecs2"
 	"main/parsers/fm"
 	"main/parsers/kills2"
@@ -14,7 +15,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
@@ -30,23 +30,26 @@ type MissionDefinition struct {
 
 type CarvedReplay struct {
 	SessionID   uint64
-	Mission     MissionDefinition
-	Difficulty  byte
-	TimeStarted time.Time
-	TimePlayed  float64
-	TeamWon     byte
-	Players     []SessionPlayer
-	Kills       []SessionKill
-	Awards      []SessionAward
+	TimeStarted uint64
+
+	Mission    MissionDefinition
+	Difficulty byte
+
+	GameDuration float64
+	TeamWon      byte
+	Players      []SessionPlayer
+	Kills        []SessionKill
+	Awards       []SessionAward
+
 	Entities    []SessionEntity
 	CarveErrors []error
 }
 
 type SessionPlayer struct {
-	UserID  uint64
-	Name    string
-	ClanTag string
-	Team    byte
+	PlayerID uint64
+	Name     string
+	ClanTag  string
+	Team     byte
 
 	Crafts map[string]string
 
@@ -78,11 +81,11 @@ type SessionKill struct {
 	Time           uint32
 	KillerID       uint64
 	KillerModel    string
-	KillerPosition *paths.SpaceTime
+	KillerPosition *game.SpaceTime
 	Weapon         string
 	VictimID       uint64
 	VictimModel    string
-	VictimPosition *paths.SpaceTime
+	VictimPosition *game.SpaceTime
 }
 
 type SessionAward struct {
@@ -97,10 +100,10 @@ type SessionEntity struct {
 	Path      EncodedSpaceTime
 }
 
-type EncodedSpaceTime []paths.SpaceTime
+type EncodedSpaceTime []game.SpaceTime
 
 func (e EncodedSpaceTime) MarshalJSON() ([]byte, error) {
-	return []byte("0"), nil
+	return []byte(strconv.Itoa(len(e))), nil
 }
 
 func (e *EncodedSpaceTime) UnmarshalJSON(data []byte) error {
@@ -127,12 +130,12 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 		return nil, fmt.Errorf("discontinuity for session %d: %w", sid, err)
 	}
 	nsp := &nextsegmentparser.PacketNextSegmentParser{}
-	prp := paths.NewPositionRetainerParser()
-	sltp := &slot2.PacketSlotParser{}
-	ecsp := ecs2.NewPacketECSParser(ecsHashes)
-	kills := &kills2.PacketKillParser{KeepKills: true, ECS: &ecsp.Mgr, Paths: prp}
 	awards := &packetaward.PacketAwardParser{}
+	ecsp := ecs2.NewPacketECSParser(ecsHashes)
+	prp := paths.NewPositionRetainerParser()
 	fmp := &fm.PacketFlightModelParser{KeepResults: true, ECS: &ecsp.Mgr}
+	kills := &kills2.PacketKillParser{KeepKills: true, ECS: &ecsp.Mgr, PathsGround: prp, PathsAir: fmp}
+	sltp := &slot2.PacketSlotParser{}
 	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp})
 	for parti, part := range parts {
 		r := packet.NewPacketStreamReader(readers[part].PacketStream)
@@ -171,9 +174,9 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 		return nil, fmt.Errorf("parsing results blk: %w", err)
 	}
 	ret := &CarvedReplay{
-		SessionID:   readers[parts[0]].Header.SessionID,
-		TimeStarted: time.Unix(int64(readers[parts[0]].Header.StartTime), 0),
-		TimePlayed:  getMapStringAnyValue(results, float64(-1), "timePlayed"),
+		SessionID:    readers[parts[0]].Header.SessionID,
+		TimeStarted:  uint64(readers[parts[0]].Header.StartTime),
+		GameDuration: getMapStringAnyValue(results, float64(-1), "timePlayed"),
 		Mission: MissionDefinition{
 			Level:         carveHeaderString(readers[parts[0]].Header.Raw_Level[:]),
 			LevelSettings: carveHeaderString(readers[parts[0]].Header.Raw_LevelSettings[:]),
@@ -186,6 +189,17 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			ret.TeamWon = sltp.Players[a.Player].Team
 			break
 		}
+	}
+	for _, a := range awards.Awards {
+		player := sltp.Players[a.Player]
+		if player == nil {
+			continue
+		}
+		ret.Awards = append(ret.Awards, SessionAward{
+			Time:      a.CurrentTime,
+			AwardName: a.AwardName,
+			PlayerID:  uint64(player.UserID),
+		})
 	}
 	resultsPlayers, _ := results["player"].([]any)
 	resultsMatchingInfo, _ := results["matchingInfo"].(map[string]any)
@@ -200,10 +214,10 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			continue
 		}
 		player := SessionPlayer{
-			UserID:  uint64(p.UserID),
-			Name:    p.Name,
-			ClanTag: p.ClanTag,
-			Team:    p.Team,
+			PlayerID: uint64(p.UserID),
+			Name:     p.Name,
+			ClanTag:  p.ClanTag,
+			Team:     p.Team,
 		}
 		for _, r := range resultsPlayers {
 			r2, ok := r.(map[string]any)
@@ -307,42 +321,40 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	}
 	flyingEntities := map[*ecs2.Entity]SessionEntity{}
 	for _, e0 := range fmp.Results {
-		entry := e0.ParsersResults[0].Data.(*fm.FMEntry)
-		if entry.Data == nil {
-			continue
-		}
-		if entry.ResolvedEntity == nil {
-			continue
-		}
-		entity, ok := flyingEntities[entry.ResolvedEntity]
-		if !ok {
-			playerid, ok := ecs2.GetObjectData[int32](&entry.ResolvedEntity.Data, "unit__playerId")
+		for _, entry := range e0.Entries {
+			if entry.Data == nil {
+				continue
+			}
+			entity, ok := flyingEntities[entry.ResolvedEntity]
 			if !ok {
-				continue
+				playerid, ok := ecs2.GetObjectData[int32](&entry.ResolvedEntity.Data, "unit__playerId")
+				if !ok {
+					continue
+				}
+				if playerid < 0 || playerid >= 255 {
+					continue
+				}
+				player := sltp.Players[playerid]
+				if player == nil {
+					continue
+				}
+				modelName, ok := ecs2.GetObjectData[string](&entry.ResolvedEntity.Data, "unit__className")
+				if !ok {
+					continue
+				}
+				entity = SessionEntity{
+					PlayerID:  uint64(player.UserID),
+					ModelName: modelName,
+				}
 			}
-			if playerid < 0 || playerid >= 255 {
-				continue
-			}
-			player := sltp.Players[playerid]
-			if player == nil {
-				continue
-			}
-			modelName, ok := ecs2.GetObjectData[string](&entry.ResolvedEntity.Data, "unit__className")
-			if !ok {
-				continue
-			}
-			entity = SessionEntity{
-				PlayerID:  uint64(player.UserID),
-				ModelName: modelName,
-			}
+			entity.Path = append(entity.Path, game.SpaceTime{
+				Time: e0.CurrentTime,
+				X:    float64(entry.Data.PosX),
+				Y:    float64(entry.Data.PosY),
+				Z:    float64(entry.Data.PosZ),
+			})
+			flyingEntities[entry.ResolvedEntity] = entity
 		}
-		entity.Path = append(entity.Path, paths.SpaceTime{
-			Time: e0.CurrentTime,
-			X:    int64(entry.Data.PosX),
-			Y:    int64(entry.Data.PosY),
-			Z:    int64(entry.Data.PosZ),
-		})
-		flyingEntities[entry.ResolvedEntity] = entity
 	}
 	ret.Entities = append(ret.Entities, slices.Collect(maps.Values(flyingEntities))...)
 	for _, k := range kills.Kills {
