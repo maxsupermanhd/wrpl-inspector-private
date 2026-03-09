@@ -10,7 +10,9 @@ import (
 )
 
 type CriticalDamageParser struct {
-	ECS *ecs2.EntityManager
+	ECS         *ecs2.EntityManager
+	KeepResults bool
+	Results     []CriticalDamagePacket
 }
 
 func (p *CriticalDamageParser) Name() string {
@@ -80,5 +82,8 @@ func (p *CriticalDamageParser) Parse(pk *packet.Packet) (any, error) {
 		}
 		return err
 	})
+	if p.KeepResults {
+		p.Results = append(p.Results, ret)
+	}
 	return ret, err
 }

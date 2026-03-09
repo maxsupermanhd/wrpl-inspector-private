@@ -10,7 +10,9 @@ import (
 )
 
 type SevereDamageParser struct {
-	ECS *ecs2.EntityManager
+	ECS         *ecs2.EntityManager
+	KeepResults bool
+	Results     []SevereDamagePacket
 }
 
 func (p *SevereDamageParser) Name() string {
@@ -77,5 +79,8 @@ func (p *SevereDamageParser) Parse(pk *packet.Packet) (any, error) {
 		}
 		return err
 	})
+	if p.KeepResults {
+		p.Results = append(p.Results, ret)
+	}
 	return ret, err
 }
