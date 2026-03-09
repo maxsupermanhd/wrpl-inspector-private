@@ -14,6 +14,7 @@ import (
 
 var (
 	flECSHashesJSONPath = flag.String("ecshashes", "../../ecshashes.json", "path to ecshashes.json file")
+	flSample            = flag.Int("sample", 0, "trim all arrays to n elements")
 	parserECSHashes     *ecs2.ComponentHashMaps
 )
 
@@ -29,6 +30,13 @@ func main() {
 	for _, arg := range flag.Args() {
 		f := noerr(os.ReadFile(arg))
 		carved := noerr(carve.CarveBundle(tar.NewReader(bytes.NewReader(f)), carve.CarveParams{}, *parserECSHashes))
+		if *flSample > 0 {
+			carved.Players = carved.Players[:min(*flSample, len(carved.Players))]
+			carved.Kills = carved.Kills[:min(*flSample, len(carved.Kills))]
+			carved.Awards = carved.Awards[:min(*flSample, len(carved.Awards))]
+			carved.DamageReports = carved.DamageReports[:min(*flSample, len(carved.DamageReports))]
+			carved.Entities = carved.Entities[:min(*flSample, len(carved.Entities))]
+		}
 		carvedJSON := noerr(json.MarshalIndent(carved, "", "\t"))
 		must(os.WriteFile(strconv.FormatUint(carved.SessionID, 10)+".json", carvedJSON, 0644))
 	}
