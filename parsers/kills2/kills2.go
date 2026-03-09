@@ -62,7 +62,7 @@ func (p *PacketKillParser) Parse(pk *packet.Packet) (any, error) {
 	}
 	var err error
 	r := danet.NewBitReader(pk.PacketPayload[4:])
-	err = idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8) error {
+	err = idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8, _ uint32) error {
 		switch fieldNum {
 		case 1:
 			return binary.Read(r, binary.LittleEndian, &parsed.KillerPid)

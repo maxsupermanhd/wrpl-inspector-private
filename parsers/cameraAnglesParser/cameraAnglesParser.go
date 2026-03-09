@@ -84,7 +84,7 @@ func (p *PacketCameraAnglesParser) Parse(pk *packet.Packet) (any, error) {
 		return nil, err
 	}
 	r.IgnoreBytes(2)
-	err = idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8) error {
+	err = idfieldserializer.DeserializeIdFieldSerializer32(r, func(fieldNum uint8, _ uint32) error {
 		switch fieldNum {
 		case 1:
 			return binary.Read(r, binary.LittleEndian, &case_1)

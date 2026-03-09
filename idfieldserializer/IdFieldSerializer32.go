@@ -54,7 +54,7 @@ var (
 	ErrSkipField = errors.New("field skip")
 )
 
-func DeserializeIdFieldSerializer32(from *danet.BitReader, fieldReader func(fieldNum uint8) error) error {
+func DeserializeIdFieldSerializer32(from *danet.BitReader, fieldReader func(fieldNum uint8, fieldSize uint32) error) error {
 	serializer := IdFieldSerializer32{}
 	fields, err := serializer.ReadFieldsSizeAndFlag(from)
 	if err != nil {
@@ -67,7 +67,7 @@ func DeserializeIdFieldSerializer32(from *danet.BitReader, fieldReader func(fiel
 			uVar3++
 		}
 		fields = fields & ^(1 << (uVar3 & 0x1f))
-		err = fieldReader(uVar3)
+		err = fieldReader(uVar3, serializer.Sizes[uVar3])
 		if err != nil {
 			if errors.Is(err, ErrSkipField) {
 				serializer.SkipReadingField(index, from)
