@@ -3,7 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
-	"encoding/hex"
+	"encoding/gob"
 	"encoding/json"
 	"io"
 	"main/carve"
@@ -11,24 +11,16 @@ import (
 	"os"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 func apiCarveBundle(w http.ResponseWriter, r *http.Request, logvals *zerolog.Event) {
-	f, _ := io.ReadAll(r.Body)
-	if len(f) > 256 {
-		log.Info().Msg("\n" + hex.Dump(f[:256]))
-	} else {
-		log.Info().Msg("\n" + hex.Dump(f))
-	}
-	ret, err := carve.CarveBundle(tar.NewReader(bytes.NewReader(f)), carve.CarveParams{}, *parserECSHashes)
+	ret, err := carve.CarveBundle(tar.NewReader(r.Body), carve.CarveParams{}, *parserECSHashes)
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(ret)
+	apiReplyWithTar(w, ret)
 }
 
 func apiCarvePath(w http.ResponseWriter, r *http.Request, logvals *zerolog.Event) {
@@ -50,6 +42,36 @@ func apiCarvePath(w http.ResponseWriter, r *http.Request, logvals *zerolog.Event
 		w.Write([]byte(err.Error()))
 		return
 	}
+	apiReplyWithTar(w, ret)
+}
+
+func apiReplyWithTar(w http.ResponseWriter, ret *carve.CarvedReplay) {
+	carveJSON, err := json.Marshal(ret)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	carveGOB := &bytes.Buffer{}
+	err = gob.NewEncoder(carveGOB).Encode(ret)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(ret)
+	tarWriter := tar.NewWriter(w)
+	tarWriter.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "carve.json",
+		Size:     int64(len(carveJSON)),
+	})
+	tarWriter.Write(carveJSON)
+	tarWriter.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg,
+		Name:     "carve.gob",
+		Size:     int64(carveGOB.Len()),
+	})
+	tarWriter.Write(carveGOB.Bytes())
+	tarWriter.Close()
 }
