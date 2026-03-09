@@ -28,7 +28,7 @@ func (p *SevereDamageParser) ParsesMatching() map[byte][][]packet.ParsingConditi
 	}
 }
 
-type CriticalDamagePacket struct {
+type SevereDamagePacket struct {
 	Seq         uint64
 	CurrentTime uint32
 
@@ -42,7 +42,7 @@ type CriticalDamagePacket struct {
 }
 
 func (p *SevereDamageParser) Parse(pk *packet.Packet) (any, error) {
-	ret := CriticalDamagePacket{
+	ret := SevereDamagePacket{
 		Seq:         pk.Seq,
 		CurrentTime: pk.CurrentTime,
 	}
