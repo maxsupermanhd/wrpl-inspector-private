@@ -2,6 +2,7 @@ package carve
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"main/game"
@@ -117,16 +118,24 @@ type SessionAward struct {
 type SessionEntity struct {
 	PlayerID  uint64
 	ModelName string
-	Path      EncodedSpaceTime
+	Path      SpaceTimeEncodeSummary
 }
 
-type EncodedSpaceTime []game.SpaceTime
+type SpaceTimeEncodeSummary []game.SpaceTime
 
-func (e EncodedSpaceTime) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.Itoa(len(e))), nil
+func (e SpaceTimeEncodeSummary) MarshalJSON() ([]byte, error) {
+	s := []game.SpaceTime(e)
+	if len(s) == 0 {
+		return []byte("null"), nil
+	}
+	return json.Marshal(map[string]any{
+		"Start":        s[0],
+		"End":          s[len(s)-1],
+		"SamplesCount": len(s),
+	})
 }
 
-func (e *EncodedSpaceTime) UnmarshalJSON(data []byte) error {
+func (e *SpaceTimeEncodeSummary) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
