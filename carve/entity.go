@@ -1,13 +1,13 @@
 package carve
 
 import (
-	"main/game"
-	"main/parsers/ecs2"
-	"main/parsers/fm"
-	"main/parsers/paths"
-	"main/parsers/slot2"
 	"maps"
 	"slices"
+	"wrplinspectorprivate/game"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/fm"
+	"wrplinspectorprivate/parsers/paths"
+	"wrplinspectorprivate/parsers/slot2"
 )
 
 func assembleEntities(

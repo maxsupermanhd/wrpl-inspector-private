@@ -2,11 +2,11 @@ package ecsui2
 
 import (
 	"fmt"
-	"main/parsers/ecs2"
 	"maps"
 	"slices"
 	"strconv"
 	"strings"
+	"wrplinspectorprivate/parsers/ecs2"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/davecgh/go-spew/spew"

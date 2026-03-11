@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"main/parsers/ecs2"
 	"math"
+	"wrplinspectorprivate/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"

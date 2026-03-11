@@ -20,8 +20,8 @@ package playersui
 
 import (
 	"fmt"
-	"main/parsers/slot2"
 	"strconv"
+	"wrplinspectorprivate/parsers/slot2"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"

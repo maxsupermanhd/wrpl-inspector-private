@@ -1,4 +1,4 @@
-module main
+module wrplinspectorprivate
 
 go 1.25.6
 

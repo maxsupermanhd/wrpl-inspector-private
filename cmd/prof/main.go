@@ -3,11 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"main/carve"
-	"main/parsers/ecs2"
 	"os"
 	"runtime/pprof"
 	"time"
+	"wrplinspectorprivate/carve"
+	"wrplinspectorprivate/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 )

@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"main/parsers/ecs2"
 	"os"
 	"os/signal"
 	"sync"
+	"wrplinspectorprivate/parsers/ecs2"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

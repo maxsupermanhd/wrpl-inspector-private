@@ -1,11 +1,11 @@
 package carve
 
 import (
-	"main/parsers/slot2"
 	"maps"
 	"slices"
 	"strconv"
 	"strings"
+	"wrplinspectorprivate/parsers/slot2"
 )
 
 type SessionPlayer struct {

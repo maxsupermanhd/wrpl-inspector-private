@@ -3,11 +3,11 @@ package kills2
 import (
 	"encoding/binary"
 	"fmt"
-	"main/game"
-	"main/idfieldserializer"
-	"main/parsers/ecs2"
-	"main/parsers/fm"
-	"main/parsers/paths"
+	"wrplinspectorprivate/game"
+	"wrplinspectorprivate/idfieldserializer"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/fm"
+	"wrplinspectorprivate/parsers/paths"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"

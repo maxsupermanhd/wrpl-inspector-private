@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"main/parsers/ecs2"
 	"strings"
+	"wrplinspectorprivate/parsers/ecs2"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"

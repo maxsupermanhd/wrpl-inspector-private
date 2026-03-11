@@ -1,11 +1,11 @@
 package carve
 
 import (
-	"main/parsers/critical"
-	"main/parsers/ecs2"
-	"main/parsers/severe"
-	"main/parsers/slot2"
 	"slices"
+	"wrplinspectorprivate/parsers/critical"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/severe"
+	"wrplinspectorprivate/parsers/slot2"
 )
 
 type DamageVariant byte

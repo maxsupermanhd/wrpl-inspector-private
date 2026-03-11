@@ -5,16 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	cameraanglesparser "main/parsers/cameraAnglesParser"
-	"main/parsers/ecs2"
-	"main/parsers/kills2"
-	"main/parsers/paths"
-	"main/parsers/slot2"
 	"maps"
 	"math"
 	"slices"
 	"strconv"
 	"time"
+	cameraanglesparser "wrplinspectorprivate/parsers/cameraAnglesParser"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/kills2"
+	"wrplinspectorprivate/parsers/paths"
+	"wrplinspectorprivate/parsers/slot2"
 
 	"github.com/AllenDang/cimgui-go/backend"
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
@@ -90,8 +90,9 @@ func (tab *MapViewTab) Init() {
 
 	tankmapImage, err := levelToTankmap(tab.TankMapsPath, tab.rLevel)
 	if err != nil {
-		tab.initErr = fmt.Errorf("levelToTankmap: %w", err)
-		return
+		tankmapImage = image.NewRGBA(image.Rect(0, 0, 2048, 2048))
+		// tab.initErr = fmt.Errorf("levelToTankmap: %w", err)
+		// return
 	}
 	tab.tankmapTextureW = tankmapImage.Rect.Dx()
 	tab.tankmapTextureH = tankmapImage.Rect.Dy()

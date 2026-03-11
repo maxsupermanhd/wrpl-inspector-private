@@ -2,11 +2,11 @@ package killsui
 
 import (
 	"fmt"
-	"main/parsers/ecs2"
-	"main/parsers/kills2"
-	"main/parsers/slot2"
 	"strconv"
 	"time"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/kills2"
+	"wrplinspectorprivate/parsers/slot2"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 )

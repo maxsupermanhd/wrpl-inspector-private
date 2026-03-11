@@ -1,10 +1,10 @@
 package carve
 
 import (
-	"main/game"
-	"main/parsers/ecs2"
-	"main/parsers/kills2"
-	"main/parsers/slot2"
+	"wrplinspectorprivate/game"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/kills2"
+	"wrplinspectorprivate/parsers/slot2"
 )
 
 type SessionKill struct {

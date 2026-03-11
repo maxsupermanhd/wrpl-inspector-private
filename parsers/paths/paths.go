@@ -2,8 +2,8 @@ package paths
 
 import (
 	"encoding/binary"
-	"main/game"
 	"math"
+	"wrplinspectorprivate/game"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"

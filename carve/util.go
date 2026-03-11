@@ -3,8 +3,8 @@ package carve
 import (
 	"bytes"
 	"fmt"
-	"main/parsers/ecs2"
-	"main/parsers/slot2"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/slot2"
 )
 
 func carveCheckPartsContinuity(parts []int) error {

@@ -3,25 +3,25 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	cameraanglesparser "main/parsers/cameraAnglesParser"
-	"main/parsers/critical"
-	"main/parsers/ecs2"
-	"main/parsers/fm"
-	"main/parsers/kills2"
-	"main/parsers/paths"
-	"main/parsers/severe"
-	"main/parsers/slot2"
-	"main/tabs/bitshiftui"
-	ecsui2 "main/tabs/ecsui"
-	"main/tabs/interpreter2"
-	"main/tabs/killsui"
-	"main/tabs/mapview"
-	"main/tabs/resultsui"
-	"main/tabs/valuesearch"
 	"os"
 	"runtime"
+	cameraanglesparser "wrplinspectorprivate/parsers/cameraAnglesParser"
+	"wrplinspectorprivate/parsers/critical"
+	"wrplinspectorprivate/parsers/ecs2"
+	"wrplinspectorprivate/parsers/fm"
+	"wrplinspectorprivate/parsers/kills2"
+	"wrplinspectorprivate/parsers/paths"
+	"wrplinspectorprivate/parsers/severe"
+	"wrplinspectorprivate/parsers/slot2"
+	"wrplinspectorprivate/tabs/bitshiftui"
+	ecsui2 "wrplinspectorprivate/tabs/ecsui"
+	"wrplinspectorprivate/tabs/interpreter2"
+	"wrplinspectorprivate/tabs/killsui"
+	"wrplinspectorprivate/tabs/mapview"
+	"wrplinspectorprivate/tabs/resultsui"
+	"wrplinspectorprivate/tabs/valuesearch"
 
-	"main/tabs/playersui"
+	"wrplinspectorprivate/tabs/playersui"
 
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
 	"github.com/davecgh/go-spew/spew"
@@ -44,9 +44,9 @@ func main() {
 	if runtime.GOOS == "darwin" {
 		runtime.LockOSThread()
 	}
-	chms = noerr(ecs2.ReadComponentHashMaps(bytes.NewReader(noerr(os.ReadFile("ecshashes.json")))))
+	chms = noerr(ecs2.ReadComponentHashMaps(bytes.NewReader(noerr(os.ReadFile("../../ecshashes.json")))))
 	ui = &inspector.UI{
-		InitFont:        noerr(os.ReadFile("HackNerdFontMono-Regular.ttf")),
+		InitFont:        noerr(os.ReadFile("../../HackNerdFontMono-Regular.ttf")),
 		ProcessReplayFn: replayProcessor,
 		InitWindowFlags: map[glfwbackend.GLFWWindowFlags]int{
 			glfwbackend.GLFWWindowFlagsMaximized: 1,
@@ -114,8 +114,8 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		Players:      slot,
 		Paths:        paths,
 		CameraAngles: cameraAngles,
-		TankMapsPath: "data/tankmaps",
-		DataminePath: "../War-Thunder-Datamine/",
+		TankMapsPath: "../../data/tankmaps",
+		DataminePath: "../../../War-Thunder-Datamine/",
 	})
 	return parsers, tabs
 }

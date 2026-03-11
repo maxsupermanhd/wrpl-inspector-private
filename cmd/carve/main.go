@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"main/carve"
-	"main/parsers/ecs2"
 	"os"
 	"strconv"
+	"wrplinspectorprivate/carve"
+	"wrplinspectorprivate/parsers/ecs2"
 )
 
 var (
