@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -39,6 +40,9 @@ func main() {
 		}
 		carvedJSON := noerr(json.MarshalIndent(carved, "", "\t"))
 		must(os.WriteFile(strconv.FormatUint(carved.SessionID, 10)+".json", carvedJSON, 0644))
+		carvedGOB := &bytes.Buffer{}
+		must(gob.NewEncoder(carvedGOB).Encode(carved))
+		must(os.WriteFile(strconv.FormatUint(carved.SessionID, 10)+".gob", carvedGOB.Bytes(), 0644))
 	}
 }
 
