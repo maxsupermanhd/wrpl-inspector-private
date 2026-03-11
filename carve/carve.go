@@ -31,6 +31,7 @@ type MissionDefinition struct {
 type CarvedReplay struct {
 	SessionID   uint64
 	TimeStarted uint64
+	Version     int32
 
 	Mission    MissionDefinition
 	Difficulty byte
@@ -109,6 +110,7 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	ret := &CarvedReplay{
 		SessionID:   readers[parts[0]].Header.SessionID,
 		TimeStarted: uint64(readers[parts[0]].Header.StartTime),
+		Version:     readers[parts[0]].Header.Version,
 		Mission: MissionDefinition{
 			Level:         carveHeaderString(readers[parts[0]].Header.Raw_Level[:]),
 			LevelSettings: carveHeaderString(readers[parts[0]].Header.Raw_LevelSettings[:]),
