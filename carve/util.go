@@ -3,8 +3,9 @@ package carve
 import (
 	"bytes"
 	"fmt"
-	"wrplinspectorprivate/parsers/ecs2"
-	"wrplinspectorprivate/parsers/slot2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 )
 
 func carveCheckPartsContinuity(parts []int) error {

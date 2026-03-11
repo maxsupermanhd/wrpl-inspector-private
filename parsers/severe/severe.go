@@ -2,8 +2,9 @@ package severe
 
 import (
 	"encoding/binary"
-	"wrplinspectorprivate/idfieldserializer"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/idfieldserializer"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"

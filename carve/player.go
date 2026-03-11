@@ -5,7 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"wrplinspectorprivate/parsers/slot2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 )
 
 type SessionPlayer struct {

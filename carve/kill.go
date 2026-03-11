@@ -1,10 +1,10 @@
 package carve
 
 import (
-	"wrplinspectorprivate/game"
-	"wrplinspectorprivate/parsers/ecs2"
-	"wrplinspectorprivate/parsers/kills2"
-	"wrplinspectorprivate/parsers/slot2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/game"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/kills2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 )
 
 type SessionKill struct {

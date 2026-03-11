@@ -3,7 +3,8 @@ package cameraanglesparser
 import (
 	"encoding/binary"
 	"math"
-	"wrplinspectorprivate/idfieldserializer"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/idfieldserializer"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"

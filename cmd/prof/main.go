@@ -6,8 +6,9 @@ import (
 	"os"
 	"runtime/pprof"
 	"time"
-	"wrplinspectorprivate/carve"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/carve"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 )

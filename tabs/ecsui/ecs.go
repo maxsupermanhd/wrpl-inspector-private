@@ -6,7 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/davecgh/go-spew/spew"

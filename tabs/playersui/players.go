@@ -21,7 +21,8 @@ package playersui
 import (
 	"fmt"
 	"strconv"
-	"wrplinspectorprivate/parsers/slot2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 
 	"github.com/AllenDang/cimgui-go/imgui"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/inspector"

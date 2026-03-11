@@ -2,10 +2,11 @@ package carve
 
 import (
 	"slices"
-	"wrplinspectorprivate/parsers/critical"
-	"wrplinspectorprivate/parsers/ecs2"
-	"wrplinspectorprivate/parsers/severe"
-	"wrplinspectorprivate/parsers/slot2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/critical"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/severe"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 )
 
 type DamageVariant byte

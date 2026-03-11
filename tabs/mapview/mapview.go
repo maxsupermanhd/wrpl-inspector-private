@@ -10,11 +10,12 @@ import (
 	"slices"
 	"strconv"
 	"time"
-	cameraanglesparser "wrplinspectorprivate/parsers/cameraAnglesParser"
-	"wrplinspectorprivate/parsers/ecs2"
-	"wrplinspectorprivate/parsers/kills2"
-	"wrplinspectorprivate/parsers/paths"
-	"wrplinspectorprivate/parsers/slot2"
+
+	cameraanglesparser "github.com/maxsupermanhd/wrpl-inspector-private/parsers/cameraAnglesParser"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/kills2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/paths"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 
 	"github.com/AllenDang/cimgui-go/backend"
 	"github.com/AllenDang/cimgui-go/backend/glfwbackend"

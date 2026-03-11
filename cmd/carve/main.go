@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"wrplinspectorprivate/carve"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/carve"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 )
 
 var (

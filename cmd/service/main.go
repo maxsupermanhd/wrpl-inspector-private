@@ -7,7 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

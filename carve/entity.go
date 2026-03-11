@@ -3,11 +3,12 @@ package carve
 import (
 	"maps"
 	"slices"
-	"wrplinspectorprivate/game"
-	"wrplinspectorprivate/parsers/ecs2"
-	"wrplinspectorprivate/parsers/fm"
-	"wrplinspectorprivate/parsers/paths"
-	"wrplinspectorprivate/parsers/slot2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/game"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/fm"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/paths"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/slot2"
 )
 
 func assembleEntities(

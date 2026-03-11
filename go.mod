@@ -1,4 +1,4 @@
-module wrplinspectorprivate
+module github.com/maxsupermanhd/wrpl-inspector-private
 
 go 1.25.6
 

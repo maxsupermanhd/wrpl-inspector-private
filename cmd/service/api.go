@@ -8,7 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"wrplinspectorprivate/carve"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/carve"
 
 	"github.com/rs/zerolog"
 )

@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"wrplinspectorprivate/parsers/ecs2"
+
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
