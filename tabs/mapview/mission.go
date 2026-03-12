@@ -235,6 +235,7 @@ func findMainBattleArea(areas map[string]AreaDef, bttlType string, difficulty by
 		"bttl" + "_battle_area_" + "arcade",
 		"dom" + "_battle_area_" + difficultyStr,
 		"dom" + "_battle_area_" + "arcade",
+		"battle_area",
 	}
 	for _, k := range tryNames {
 		ret, ok := areas[k]
