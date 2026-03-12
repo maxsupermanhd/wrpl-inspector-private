@@ -161,8 +161,11 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	}
 	for _, a := range slices.Backward(awards.Awards) {
 		if a.AwardName == "hidden_win_streak" {
-			ret.TeamWon = sltp.Players[a.Player].Team
-			break
+			p := sltp.Players[a.Player]
+			if p != nil {
+				ret.TeamWon = p.Team
+				break
+			}
 		}
 	}
 	for _, a := range awards.Awards {
