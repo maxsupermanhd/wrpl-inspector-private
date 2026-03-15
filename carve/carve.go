@@ -20,6 +20,7 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
+	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
 )
 
 type MissionDefinition struct {
@@ -36,14 +37,16 @@ type CarvedReplay struct {
 	Mission    MissionDefinition
 	Difficulty byte
 
-	GameDuration  float64
-	TeamWon       byte
+	GameDuration float64
+	TeamWon      byte
+
 	Players       []SessionPlayer
 	Kills         []SessionKill
 	Awards        []SessionAward
 	DamageReports []SessionDamage
+	Entities      []SessionEntity
+	ChatMessages  []SessionChatMessage
 
-	Entities    []SessionEntity
 	CarveErrors []error
 }
 
@@ -78,6 +81,12 @@ func (e *SpaceTimeEncodeSummary) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type SessionChatMessage struct {
+	Time    uint32
+	Sender  string
+	Message string
+}
+
 func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHashMaps) (*CarvedReplay, error) {
 	if len(readers) == 0 {
 		return nil, errors.New("no replays?")
@@ -106,7 +115,8 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	sltp := &slot2.PacketSlotParser{}
 	dcp := &critical.CriticalDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
 	dsp := &severe.SevereDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
-	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp, dcp, dsp})
+	chat := &packetchat.PacketChatParser{}
+	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp, dcp, dsp, chat})
 	ret := &CarvedReplay{
 		SessionID:   readers[parts[0]].Header.SessionID,
 		TimeStarted: uint64(readers[parts[0]].Header.StartTime),
@@ -177,6 +187,13 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			Time:      a.CurrentTime,
 			AwardName: a.AwardName,
 			PlayerID:  uint64(player.UserID),
+		})
+	}
+	for _, msg := range chat.Messages {
+		ret.ChatMessages = append(ret.ChatMessages, SessionChatMessage{
+			Time:    msg.CurrentTime,
+			Sender:  msg.Sender,
+			Message: msg.Content,
 		})
 	}
 	ret.Entities, err = assembleEntities(&ecsp.Mgr, sltp.Players, prp, fmp)
