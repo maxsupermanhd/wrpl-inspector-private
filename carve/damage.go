@@ -26,7 +26,7 @@ type SessionDamage struct {
 	OffendedID          uint64
 	OffendedModel       string
 	OffendedEntityIndex uint32
-	CausedFire          bool `json:",omitempty"`
+	CausedFire          bool
 }
 
 func assembleDamage(
