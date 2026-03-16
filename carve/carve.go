@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/maxsupermanhd/wrpl-inspector-private/game"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/chat2"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/critical"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/fm"
@@ -20,7 +21,6 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 	packetaward "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/award"
-	packetchat "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet/parser/chat"
 )
 
 type MissionDefinition struct {
@@ -85,6 +85,8 @@ type SessionChatMessage struct {
 	Time    uint32
 	Sender  string
 	Message string
+	// 0 team 1 all 2 squad 3 direct message
+	Channel byte
 }
 
 func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHashMaps) (*CarvedReplay, error) {
@@ -115,7 +117,7 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	sltp := &slot2.PacketSlotParser{}
 	dcp := &critical.CriticalDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
 	dsp := &severe.SevereDamageParser{KeepResults: true, ECS: &ecsp.Mgr}
-	chat := &packetchat.PacketChatParser{}
+	chat := &chat2.PacketChatParser{}
 	pm := packet.NewParserMatcher([]packet.PacketParser{nsp, prp, ecsp, sltp, kills, awards, fmp, dcp, dsp, chat})
 	ret := &CarvedReplay{
 		SessionID:   readers[parts[0]].Header.SessionID,
@@ -194,6 +196,7 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			Time:    msg.CurrentTime,
 			Sender:  msg.Sender,
 			Message: msg.Content,
+			Channel: msg.ChannelType,
 		})
 	}
 	ret.Entities, err = assembleEntities(&ecsp.Mgr, sltp.Players, prp, fmp)

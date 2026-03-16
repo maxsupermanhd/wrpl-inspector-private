@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	cameraanglesparser "github.com/maxsupermanhd/wrpl-inspector-private/parsers/cameraAnglesParser"
+	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/chat2"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/critical"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/ecs2"
 	"github.com/maxsupermanhd/wrpl-inspector-private/parsers/fm"
@@ -81,6 +82,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		cameraAngles,
 		fmp,
 		// &mpiparser.MPIStuffParser{},
+		&chat2.PacketChatParser{},
 		&critical.CriticalDamageParser{ECS: &ecs.Mgr},
 		&severe.SevereDamageParser{ECS: &ecs.Mgr},
 	}
