@@ -33,7 +33,7 @@ func (p *PositionRetainerParser) ParsesMatching() map[byte][][]packet.ParsingCon
 			packet.NewParsingCondition(6, 0xf0),
 			packet.NewParsingCondition(10, 0x00),
 			packet.NewParsingCondition(11, 0x00),
-			packet.NewParsingCondition(13, 0x14),
+			packet.NewParsingCondition(13, 0x13),
 		}},
 	}
 }
