@@ -463,6 +463,7 @@ var (
 		"Bomb":                               ComponentParserFunc(RocketSerializer),
 		"Rocket":                             ComponentParserFunc(RocketSerializer),
 		"Jettisoned":                         ComponentParserFunc(RocketSerializer),
+		"BufferedHudData":                    ComponentParserFunc(GenericListParser[uint8]),
 	}
 
 	default_datacomp_map = map[string]ComponentParser{
