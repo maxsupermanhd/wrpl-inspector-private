@@ -47,7 +47,7 @@ type CarvedReplay struct {
 	Entities      []SessionEntity
 	ChatMessages  []SessionChatMessage
 
-	CarveErrors []error
+	CarveErrors []string
 }
 
 type SessionAward struct {
@@ -129,7 +129,7 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 			BattleType:    carveHeaderString(readers[parts[0]].Header.Raw_BattleType[:]),
 		},
 		Difficulty:  readers[parts[0]].Header.Difficulty,
-		CarveErrors: []error{},
+		CarveErrors: []string{},
 	}
 	for parti, part := range parts {
 		r := packet.NewPacketStreamReader(readers[part].PacketStream)
@@ -140,13 +140,13 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 				break
 			}
 			if err != nil {
-				ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("reading packet %d from part %d: %w", pk.Seq, part, err))
+				ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("reading packet %d from part %d: %w", pk.Seq, part, err).Error())
 				break
 			}
 			errs := pm.MatchIgnoreData(pk)
 			if len(errs) > 0 {
 				for _, err := range errs {
-					ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("parsing packet %d from part %d returned error: %q", pk.Seq, part, err))
+					ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("parsing packet %d from part %d returned error: %q", pk.Seq, part, err).Error())
 				}
 			}
 			pk.Seq++
@@ -164,12 +164,12 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	}
 	results, err := wrpl.ParseBlk(readers[parts[len(parts)-1]].Results)
 	if err != nil {
-		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("parsing results blk: %w", err))
+		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("parsing results blk: %w", err).Error())
 	}
 	ret.GameDuration = getMapStringAnyValue(results, float64(-1), "timePlayed")
 	ret.Players, err = assemblePlayers(results, sltp.Players)
 	if err != nil {
-		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling players: %w", err))
+		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling players: %w", err).Error())
 	}
 	for _, a := range slices.Backward(awards.Awards) {
 		if a.AwardName == "hidden_win_streak" {
@@ -201,15 +201,15 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 	}
 	ret.Entities, err = assembleEntities(&ecsp.Mgr, sltp.Players, prp, fmp)
 	if err != nil {
-		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling entities: %w", err))
+		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling entities: %w", err).Error())
 	}
 	ret.Kills, err = assembleKills(&ecsp.Mgr, sltp.Players, kills)
 	if err != nil {
-		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling kills: %w", err))
+		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling kills: %w", err).Error())
 	}
 	ret.DamageReports, err = assembleDamage(&ecsp.Mgr, sltp.Players, dcp, dsp)
 	if err != nil {
-		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling damage: %w", err))
+		ret.CarveErrors = append(ret.CarveErrors, fmt.Errorf("assembling damage: %w", err).Error())
 	}
 	return ret, nil
 }
