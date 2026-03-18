@@ -391,6 +391,17 @@ func RocketSerializer(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 		return nil, err
 	}
 
+	temp3, err := r.ReadBytes(2)
+	if err != nil {
+		return nil, err
+	}
+	n3 := (*uint16)(unsafe.Pointer(&temp3[0]))
+	x3 := (int(*n3) + 7) & 0xfffffff8
+	_, err = r.ReadBits(x3)
+	if err != nil {
+		return nil, err
+	}
+
 	r.IgnoreBits(112)
 	// _, err = r.ReadBits(112)
 	// if err != nil {
