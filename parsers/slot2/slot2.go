@@ -253,7 +253,15 @@ func (p *PacketSlotParser) ParseSlotMessage_PlayerInit(slot byte, r *danet.BitRe
 		return nil, err
 	}
 	u.Name = strings.ToValidUTF8(strings.Trim(string(uName), "\x00"), "?")
-	r.IgnoreBytes(20)
+	r.IgnoreBytes(18)
+	_, err = r.ReadLenStr() // name again?
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.ReadLenStr() // bot name
+	if err != nil {
+		return nil, err
+	}
 	clanTag, err := r.ReadLenStr()
 	if err != nil {
 		return nil, err
