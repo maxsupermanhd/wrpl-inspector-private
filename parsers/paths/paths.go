@@ -34,6 +34,14 @@ func (p *PositionRetainerParser) ParsesMatching() map[byte][][]packet.ParsingCon
 			packet.NewParsingCondition(10, 0x00),
 			packet.NewParsingCondition(11, 0x00),
 			packet.NewParsingCondition(13, 0x13),
+		}, {
+			packet.NewParsingCondition(0, 0xff),
+			packet.NewParsingCondition(1, 0x0f),
+			packet.NewParsingCondition(4, 0xa3),
+			packet.NewParsingCondition(5, 0xf0),
+			packet.NewParsingCondition(9, 0x00),
+			packet.NewParsingCondition(10, 0x00),
+			packet.NewParsingCondition(12, 0x13),
 		}},
 	}
 }
@@ -42,15 +50,17 @@ func (p *PositionRetainerParser) Parse(pk *packet.Packet) (any, error) {
 	if len(pk.PacketPayload) < 40 {
 		return nil, nil
 	}
-	eid, err := danet.NewBitReader(pk.PacketPayload[2:]).ReadCompressed()
+	r := danet.NewBitReader(pk.PacketPayload[2:])
+	eid, err := r.ReadCompressed()
 	if err != nil {
 		return nil, err
 	}
+	byteOffset := r.BitOffset / 8
 	st := game.SpaceTime{
 		Time: pk.CurrentTime,
-		X:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[14:])),
-		Y:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[22:])),
-		Z:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[30:])),
+		X:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[11+byteOffset:])),
+		Y:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[19+byteOffset:])),
+		Z:    math.Float64frombits(binary.LittleEndian.Uint64(pk.PacketPayload[27+byteOffset:])),
 	}
 	p.Paths[eid] = append(p.Paths[eid], st)
 	return st, nil
