@@ -474,6 +474,7 @@ var (
 		"Bomb":                               ComponentParserFunc(RocketSerializer),
 		"Rocket":                             ComponentParserFunc(RocketSerializer),
 		"Jettisoned":                         ComponentParserFunc(RocketSerializer),
+		"Torpedo":                            ComponentParserFunc(RocketSerializer),
 		"BufferedHudData":                    ComponentParserFunc(GenericListParser[uint8]),
 	}
 
