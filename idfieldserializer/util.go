@@ -1,6 +1,14 @@
 package idfieldserializer
 
-import "github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+import (
+	"errors"
+
+	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
+)
+
+var (
+	ErrSkipField = errors.New("field skip")
+)
 
 func ReadSize(from *danet.BitReader) (uint32, error) {
 	hdrT, err := from.ReadBits(3)

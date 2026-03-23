@@ -3,18 +3,13 @@ package idfieldserializer
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"math/bits"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 )
 
-const MAX_FIELDS_NUM = 32
-
 type IdFieldSerializer32 struct {
-	Sizes    [MAX_FIELDS_NUM]uint32
-	CurrWrSz uint8 // probably not needed
-	CurrRdSz uint8
+	Sizes [32]uint32
 }
 
 func (p *IdFieldSerializer32) ReadFieldsSizeAndFlag(from *danet.BitReader) (uint32, error) {
@@ -22,7 +17,7 @@ func (p *IdFieldSerializer32) ReadFieldsSizeAndFlag(from *danet.BitReader) (uint
 	var offset uint16
 	start := from.BitOffset
 	if start&7 != 0 {
-		return 0, fmt.Errorf("IdFieldSerializer32 not alligned to byte")
+		return 0, errors.New("IdFieldSerializer32 not alligned to byte")
 	}
 	err := binary.Read(from, binary.LittleEndian, &offset)
 	if err != nil {
@@ -34,9 +29,7 @@ func (p *IdFieldSerializer32) ReadFieldsSizeAndFlag(from *danet.BitReader) (uint
 	}
 	startBody := from.BitOffset
 	from.BitOffset = int(offset<<3) + start
-	p.CurrRdSz = uint8(bits.OnesCount32(uint32(fields)))
-
-	for i := 0; i < int(p.CurrRdSz); i++ {
+	for i := 0; i < int(uint8(bits.OnesCount32(uint32(fields)))); i++ {
 		p.Sizes[i], err = ReadSize(from)
 		if err != nil {
 			return 0, err
@@ -49,10 +42,6 @@ func (p *IdFieldSerializer32) ReadFieldsSizeAndFlag(from *danet.BitReader) (uint
 func (p *IdFieldSerializer32) SkipReadingField(index uint8, from *danet.BitReader) {
 	from.BitOffset = from.BitOffset + int(p.Sizes[index])
 }
-
-var (
-	ErrSkipField = errors.New("field skip")
-)
 
 func DeserializeIdFieldSerializer32(from *danet.BitReader, fieldReader func(fieldNum uint8, fieldSize uint32) error) error {
 	serializer := IdFieldSerializer32{}

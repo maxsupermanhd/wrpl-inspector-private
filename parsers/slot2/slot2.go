@@ -23,8 +23,9 @@ import (
 	"fmt"
 	"io"
 	"slices"
-	"strings"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/maxsupermanhd/wrpl-inspector-private/idfieldserializer"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
@@ -60,6 +61,7 @@ type PacketSlotParser struct {
 	Players      [256]*Player
 	Messages     []packet.ParsedPacket
 	KeepMessages bool
+	scratch      [256]byte
 }
 
 func (p *PacketSlotParser) Name() string {
@@ -97,18 +99,19 @@ func (p *PacketSlotParser) GetPacketStreams() []packet.ParsedPacketStream {
 func (p *PacketSlotParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
 	return map[byte][][]packet.ParsingCondition{
 		4: {
-			{
-				packet.NewParsingCondition(0, 0x02),
-				packet.NewParsingCondition(1, 0x58),
-				packet.NewParsingCondition(2, 0xaa),
-				packet.NewParsingCondition(3, 0xff),
-			},
+			// {
+			// 	packet.NewParsingCondition(0, 0x02),
+			// 	packet.NewParsingCondition(1, 0x58),
+			// 	packet.NewParsingCondition(2, 0xaa),
+			// 	packet.NewParsingCondition(3, 0xff),
+			// },
 			{
 				packet.NewParsingCondition(0, 0x02),
 				packet.NewParsingCondition(1, 0x58),
 				packet.NewParsingCondition(2, 0x2d),
 				packet.NewParsingCondition(3, 0xf0),
-			}},
+			},
+		},
 	}
 }
 
@@ -211,31 +214,74 @@ func (p *PacketSlotParser) ParseSlotMessage(slot byte, msg []byte) (any, error) 
 	if len(msg) < 5 {
 		return nil, nil
 	}
-	r := danet.NewBitReader(msg)
-	header := make([]byte, 5)
-	_, err := r.Read(header)
-	if err != nil {
-		return nil, err
-	}
-	if header[0] != 0x70 || header[4] != 0x60 {
+	if msg[0] != 0x70 {
 		return nil, nil
 	}
-	if header[3] != 0x08 && header[3] != 0x30 {
-		return nil, nil
+	r := danet.NewBitReader(msg[1:])
+	plr := p.Players[slot]
+	if plr == nil {
+		plr = &Player{
+			UserID: 0,
+		}
+		p.Players[slot] = plr
 	}
-	switch header[2] {
-	case 0x01:
-		return p.ParseSlotMessage_PlayerInit(slot, r)
-	case 0x02:
-		return p.ParseSlotMessage_PlayerInit(slot, r)
-	default:
-		return nil, nil
+	type field struct {
+		plr  *Player
+		idx  uint16
+		size uint32
+		b    []byte
 	}
+	fields := []field{}
+	err := idfieldserializer.DeserializeIdFieldSerializer255(r, func(fieldIndex uint16, fieldSize uint32) (err error) {
+		b, err := r.ReadBits(int(fieldSize))
+		if err != nil {
+			return err
+		}
+		fields = append(fields, field{
+			plr:  plr,
+			idx:  fieldIndex,
+			size: fieldSize,
+			b:    b,
+		})
+		r2 := danet.NewBitReader(b)
+		switch fieldIndex {
+		case 2:
+			uid, err := r2.ReadU32LE()
+			if err != nil {
+				return err
+			}
+			if uid != 0 {
+				plr.UserID = uid
+			}
+		case 5:
+			err = r2.ReadLenStrInto(&plr.ClanTag)
+		case 6:
+			err = r2.ReadLenStrInto(&plr.Title)
+		case 9:
+			plr.Team, err = r2.ReadByte()
+		case 41:
+			spew.Dump(fieldIndex, fieldSize, b)
+			err = r2.ReadLenStrInto(&plr.Name)
+		default:
+			// return idfieldserializer.ErrSkipField
+		}
+		/*
+			2 user id
+			5 clan tag
+			6 title
+			9 team
+			13 score
+			41 real nick
+			42 squadron id
+		*/
+		return err
+	})
+	return fields, err
 }
 
-func (p *PacketSlotParser) ParseSlotMessage_PlayerInit(slot byte, r *danet.BitReader) (*Player, error) {
-	u := &Player{}
-	err := binary.Read(r, binary.LittleEndian, &u.UserID)
+/*
+
+err := binary.Read(r, binary.LittleEndian, &u.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +326,4 @@ func (p *PacketSlotParser) ParseSlotMessage_PlayerInit(slot byte, r *danet.BitRe
 	u.Team, err = r.ReadByte()
 	if err != nil {
 		return nil, err
-	}
-	p.Players[slot] = u
-	return u, nil
-}
+	}*/
