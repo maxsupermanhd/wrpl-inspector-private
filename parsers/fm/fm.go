@@ -339,6 +339,8 @@ type FMTargetData struct {
 	Unk15 bool
 	Unk16 bool
 	Unk17 uint8
+	Unk18 bool
+	Unk19 uint32
 }
 
 func readTarget(r *danet.BitReader) (ret FMTargetData, err error) {
@@ -423,6 +425,17 @@ func readTarget(r *danet.BitReader) (ret FMTargetData, err error) {
 		if err != nil {
 			return ret, fmt.Errorf("reading unk17: %w", err)
 		}
+	}
+	ret.Unk18, err = r.ReadBit()
+	if err != nil {
+		return ret, fmt.Errorf("reading unk18: %w", err)
+	}
+	if ret.Unk18 {
+		ret.Unk19, err = r.ReadU32LE()
+		if err != nil {
+			return ret, fmt.Errorf("reading unk19: %w", err)
+		}
+
 	}
 	return ret, nil
 }
