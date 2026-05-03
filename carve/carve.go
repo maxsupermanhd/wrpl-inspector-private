@@ -191,7 +191,7 @@ func CarveReplay(readers map[int]*wrpl.ReplayReader, ecsHashes ecs2.ComponentHas
 		ret.Awards = append(ret.Awards, SessionAward{
 			Time:      a.CurrentTime,
 			AwardName: a.AwardName,
-			PlayerID:  uint64(player.UserID),
+			PlayerID:  uint64(player.Uid.Player_id),
 		})
 	}
 	for _, msg := range chat.Messages {

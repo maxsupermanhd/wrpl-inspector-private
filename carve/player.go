@@ -52,17 +52,20 @@ func assemblePlayers(results map[string]any, slots [256]*slot2.Player) (ret []Se
 		if p == nil {
 			continue
 		}
-		if p.Name == "" {
+		if p.Uid.Name == "" {
 			continue
 		}
-		if p.UserID == 0 {
+		if p.Uid.Player_id == 0 {
 			continue
 		}
 		player := SessionPlayer{
-			PlayerID: uint64(p.UserID),
-			Name:     p.Name,
+			PlayerID: uint64(p.Uid.Player_id),
+			Name:     p.Uid.Name,
 			ClanTag:  p.ClanTag,
 			Team:     p.Team,
+		}
+		if p.RealNick != "" {
+			player.Name = p.RealNick
 		}
 		for _, r := range resultsPlayers {
 			r2, ok := r.(map[string]any)
@@ -77,7 +80,7 @@ func assemblePlayers(results map[string]any, slots [256]*slot2.Player) (ret []Se
 			if err != nil {
 				continue
 			}
-			if p.UserID != uint32(pid) {
+			if p.Uid.Player_id != pid {
 				continue
 			}
 
@@ -109,7 +112,7 @@ func assemblePlayers(results map[string]any, slots [256]*slot2.Player) (ret []Se
 			if err != nil {
 				continue
 			}
-			if p.UserID != uint32(pid) {
+			if p.Uid.Player_id != pid {
 				continue
 			}
 			craftsInfo, ok := r2["crafts_info"].(map[string]any)

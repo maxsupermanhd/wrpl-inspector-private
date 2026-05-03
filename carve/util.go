@@ -82,6 +82,6 @@ func resolveEntityDetails(players [256]*slot2.Player, entity *ecs2.Entity) (play
 	if player == nil {
 		return
 	}
-	playerID = uint64(player.UserID)
+	playerID = player.Uid.Player_id
 	return
 }

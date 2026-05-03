@@ -57,7 +57,7 @@ func assembleDamage(
 			if player == nil {
 				continue
 			}
-			entry.OffenderID = uint64(player.UserID)
+			entry.OffenderID = uint64(player.Uid.Player_id)
 		}
 		ret = append(ret, entry)
 	}
