@@ -26,19 +26,23 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector-private/idfieldserializer"
-	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
 
 	"github.com/klauspost/compress/zstd"
 )
 
+type UID struct {
+	Player_id uint64
+	Name      string
+}
+
 type Player struct {
-	Name    string
-	ClanTag string
-	UserID  uint32
-	Title   string
-	Team    byte
+	Uid      UID
+	ClanTag  string
+	Title    string
+	Team     byte
+	RealNick string
 }
 
 type ParsedPacketSlotMessage struct {
@@ -52,7 +56,7 @@ type ParsedPacketSlotMessage struct {
 }
 
 type SlotPrefixedMessage struct {
-	Slot    byte
+	Oid     uint16
 	Message []byte
 	*packet.ParserResult
 }
@@ -80,7 +84,7 @@ func (p *PacketSlotParser) GetPacketStreams() []packet.ParsedPacketStream {
 				Packet: packet.Packet{
 					Seq:           v.Seq,
 					CurrentTime:   v.CurrentTime,
-					PacketType:    v2.Slot,
+					PacketType:    uint8(v2.Oid >> 0xb),
 					PacketPayload: v2.Message,
 				},
 				ParsersResults: results,
@@ -115,33 +119,47 @@ func (p *PacketSlotParser) ParsesMatching() map[byte][][]packet.ParsingCondition
 	}
 }
 
+const INVALID_OBJECT_ID uint16 = 0xFFFF
+const INVALID_OBJECT_EXT_UID uint32 = 0xFFFFFFFF
+const EXT_MASK uint16 = 0x7FF
+
+func read_object_ext_uid(bs *danet.BitReader) (uint16, uint32) {
+	var oid uint16 = INVALID_OBJECT_ID
+	var ext_uid uint32 = INVALID_OBJECT_EXT_UID
+	err := binary.Read(bs, binary.LittleEndian, &oid)
+	if err != nil {
+		return INVALID_OBJECT_ID, INVALID_OBJECT_EXT_UID
+	}
+	if (oid&EXT_MASK) == EXT_MASK && oid != INVALID_OBJECT_ID {
+
+		ext_uid_t, err := bs.ReadCompressed() // max give me a uint32 ReadCompressed
+		ext_uid = uint32(ext_uid_t)
+		if err != nil {
+			return INVALID_OBJECT_ID, INVALID_OBJECT_EXT_UID
+		}
+	}
+	return oid, ext_uid
+}
+
 func (p *PacketSlotParser) Parse(pk *packet.Packet) (any, error) {
 	parsed := &ParsedPacketSlotMessage{}
-	r := bytes.NewReader(pk.PacketPayload[4:])
+	r := danet.NewBitReader(pk.PacketPayload[4:])
 	var err error
 	parsed.DataCompressed, err = r.ReadByte()
 	if err != nil {
 		return nil, err
 	}
-	var r2 *bytes.Reader
+	var to_use *danet.BitReader
 	if parsed.DataCompressed > 0 {
-		parsed.Unk0, err = wrpl.ReadToHexStr(r, 1)
+		var comp_size uint64
+		var decomp_size uint64
+		err := r.ReadCompressedInto(&comp_size)
 		if err != nil {
 			return nil, err
 		}
-		parsed.Control, err = r.ReadByte()
+		err = r.ReadCompressedInto(&decomp_size)
 		if err != nil {
 			return nil, err
-		}
-		parsed.Unk1, err = wrpl.ReadToHexStr(r, 2)
-		if err != nil {
-			return nil, err
-		}
-		if parsed.Control&0xF0 > 0 {
-			parsed.Unk2, err = wrpl.ReadToHexStr(r, 1) // perhaps this 0x04 is blk type 4, slim zstd
-			if err != nil {
-				return nil, err
-			}
 		}
 		dc, err2 := zstd.NewReader(r) // 28b52ffd
 		if err2 != nil {
@@ -151,46 +169,51 @@ func (p *PacketSlotParser) Parse(pk *packet.Packet) (any, error) {
 		if err2 != nil {
 			return nil, err
 		}
-		r2 = bytes.NewReader(b)
+		to_use = danet.NewBitReader(b)
 	} else {
-		r2 = r
+		to_use = r
 	}
 	messageCount := uint16(0)
-	err = binary.Read(r2, binary.LittleEndian, &messageCount)
+	err = binary.Read(to_use, binary.LittleEndian, &messageCount)
 	if err != nil {
 		return nil, err
 	}
 	for messageNum := range messageCount {
 		messageLen := uint16(0)
-		err = binary.Read(r2, binary.LittleEndian, &messageLen)
+		err = binary.Read(to_use, binary.LittleEndian, &messageLen)
 		if err != nil {
 			return nil, err
 		}
-		messageSlot, err2 := r2.ReadByte()
-		if err2 != nil {
-			return nil, err
+		var before_read = to_use.BitOffset
+		oid, ext_uid := read_object_ext_uid(to_use)
+		var after_read = to_use.BitOffset
+		if oid == INVALID_OBJECT_ID && ext_uid == INVALID_OBJECT_EXT_UID {
+			return nil, fmt.Errorf("failed to read oid and ext_uid")
 		}
-		messageBuf := make([]byte, messageLen-1)
-		_, err = r2.Read(messageBuf)
+		messageBuf := make([]byte, messageLen-uint16((after_read-before_read)>>3))
+		_, err = to_use.Read(messageBuf)
 		if err != nil {
 			return nil, err
 		}
-		data, err := p.ParseSlotMessage(messageSlot, messageBuf)
-		if err != nil {
-			err = fmt.Errorf("parsing slot message %d: %w", messageNum, err)
-		}
-		var result *packet.ParserResult
-		if data != nil || err != nil {
-			result = &packet.ParserResult{
-				Data: data,
-				Err:  err,
+		if oid>>0xb == 0xe {
+			data, err := p.ParseSlotMessage(oid&0x7FF, messageBuf)
+			if err != nil {
+				err = fmt.Errorf("parsing slot message %d: %w", messageNum, err)
 			}
+			var result *packet.ParserResult
+			if data != nil || err != nil {
+				result = &packet.ParserResult{
+					Data: data,
+					Err:  err,
+				}
+			}
+			parsed.Messages = append(parsed.Messages, SlotPrefixedMessage{
+				Oid:          oid,
+				Message:      messageBuf,
+				ParserResult: result,
+			})
 		}
-		parsed.Messages = append(parsed.Messages, SlotPrefixedMessage{
-			Slot:         messageSlot,
-			Message:      messageBuf,
-			ParserResult: result,
-		})
+
 	}
 	if p.KeepMessages {
 		p.Messages = append(p.Messages, packet.ParsedPacket{
@@ -210,20 +233,63 @@ func (p *PacketSlotParser) Parse(pk *packet.Packet) (any, error) {
 	return parsed, err
 }
 
-func (p *PacketSlotParser) ParseSlotMessage(slot byte, msg []byte) (any, error) {
-	if len(msg) < 5 {
-		return nil, nil
-	}
-	if msg[0] != 0x70 {
-		return nil, nil
-	}
-	r := danet.NewBitReader(msg[1:])
-	plr := p.Players[slot]
+const (
+	uid                         = 2
+	invitedNickName             = 3
+	nickLocKey                  = 4
+	ClanTag                     = 5
+	Title                       = 6
+	publicFlags                 = 7
+	decals                      = 8
+	team                        = 9
+	countryId                   = 10
+	memberId                    = 11
+	customState                 = 12
+	score                       = 13
+	dummyForSupportPlanes       = 14
+	dummyForCrewUnitsList       = 15
+	disabledByMatchingSlots     = 16
+	brokenSlots                 = 17
+	wasReadySlots               = 18
+	spareAircraftInSlots        = 19
+	ownedSlots                  = 20
+	classinessMark              = 21
+	timeToRespawn               = 22
+	timeToRespawnInCoop         = 23
+	forcedRespawn               = 24
+	timeToKick                  = 25
+	guiState                    = 26
+	spectatedModelIndex         = 27
+	dummyForCountUsedSlots      = 28
+	dummyForSpawnCosts          = 29
+	dummyForSpawnDelayTimes     = 30
+	dummyForKillStreaksProgress = 31
+	state                       = 32
+	squadScore                  = 33
+	ownedUnitRef                = 34
+	controlledUnitRef           = 35
+	supportUnitRef              = 36
+	wreckedPartShipUnitRef      = 37
+	dummyForRoundScore          = 38
+	dummyForPlayerStat          = 39
+	dummyForFootballStat        = 40
+	realNick                    = 41
+	squadronId                  = 42
+	forceLockTarget             = 43
+	cachedIsAutoSquad           = 44
+	nickFrame                   = 45
+	missionSupportUnitRef       = 46
+	missionSupportUnitEnabled   = 47
+	rageTokens                  = 48
+)
+
+func (p *PacketSlotParser) ParseSlotMessage(index uint16, msg []byte) (any, error) {
+
+	r := danet.NewBitReader(msg)
+	plr := p.Players[index]
 	if plr == nil {
-		plr = &Player{
-			UserID: 0,
-		}
-		p.Players[slot] = plr
+		plr = &Player{}
+		p.Players[index] = plr
 	}
 	type field struct {
 		plr  *Player
@@ -245,25 +311,32 @@ func (p *PacketSlotParser) ParseSlotMessage(slot byte, msg []byte) (any, error) 
 		})
 		r2 := danet.NewBitReader(b)
 		switch fieldIndex {
-		case 2:
-			uid, err := r2.ReadU32LE()
+		case uid:
+			plr.Uid.Player_id, err = r2.ReadU64LE()
 			if err != nil {
 				return err
 			}
-			if uid != 0 {
-				plr.UserID = uid
+			var temp_name [82]byte
+			sz, err := r2.ReadBytesInto(82, temp_name[:])
+			if err != nil {
+				return err
 			}
-		case 5:
+			if sz != 82 {
+				return fmt.Errorf("invalid size reading uid name: %d", sz)
+			}
+
+			plr.Uid.Name = string(bytes.Trim(temp_name[:], "\x00"))
+		case ClanTag:
 			err = r2.ReadLenStrInto(&plr.ClanTag)
-		case 6:
+		case Title:
 			err = r2.ReadLenStrInto(&plr.Title)
-		case 9:
+		case team:
 			plr.Team, err = r2.ReadByte()
-		case 41:
+		case realNick:
 			spew.Dump(fieldIndex, fieldSize, b)
-			err = r2.ReadLenStrInto(&plr.Name)
+			err = r2.ReadLenStrInto(&plr.RealNick)
 		default:
-			// return idfieldserializer.ErrSkipField
+			return idfieldserializer.ErrSkipField
 		}
 		/*
 			2 user id

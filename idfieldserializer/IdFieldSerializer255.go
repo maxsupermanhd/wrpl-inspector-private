@@ -8,6 +8,13 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 )
 
+const BITS_PER_COUNT = 12
+const BIT_MASK_COUNT = (1 << BITS_PER_COUNT) - 1
+
+func alingedToByte(count uint32) uint32 {
+	return count + 8 - (((count - 1) & 7) + 1)
+}
+
 func DeserializeIdFieldSerializer255(from *danet.BitReader, fieldReader func(fieldIndex uint16, fieldSize uint32) error) error {
 	start := from.BitOffset
 	if start&7 != 0 {
@@ -25,12 +32,11 @@ func DeserializeIdFieldSerializer255(from *danet.BitReader, fieldReader func(fie
 		return fmt.Errorf("reading count: %w", err)
 	}
 
-	fieldsCount := count & ((1 << 12) - 1)
+	fieldsCount := count & BIT_MASK_COUNT
 	if fieldsCount >= 255 {
 		return fmt.Errorf("IdFieldSerializer255 fieldsCount >= 255 with %d (count is %d)", fieldsCount, count)
 	}
-	bitsPerID := count >> 12
-	bitsForIndices := fieldsCount * bitsPerID
+	bitsPerID := count >> BITS_PER_COUNT
 
 	startBody := from.BitOffset
 
@@ -45,9 +51,9 @@ func DeserializeIdFieldSerializer255(from *danet.BitReader, fieldReader func(fie
 
 	end := ((from.BitOffset + 7) >> 3) << 3
 	_ = end
-
+	bitsForIndices := alingedToByte(uint32(bitsPerID * fieldsCount))
 	indexes := make([]uint16, fieldsCount)
-	from.BitOffset = start + int((offset<<3)-bitsForIndices)
+	from.BitOffset = startBody - 32 + int((offset<<3)-uint16(bitsForIndices))
 	scratch := [2]byte{}
 	for i := range fieldsCount {
 		_, err = from.ReadBitsInto(int(bitsPerID), scratch[:])
@@ -67,6 +73,7 @@ func DeserializeIdFieldSerializer255(from *danet.BitReader, fieldReader func(fie
 		before := from.BitOffset
 		err = fieldReader(idx, s)
 		if err == ErrSkipField {
+			from.BitOffset = before
 			from.BitOffset += int(s)
 		} else if err != nil {
 			return err

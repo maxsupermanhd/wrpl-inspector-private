@@ -524,7 +524,7 @@ func (tab *MapViewTab) runPaths() {
 				imgui.TextUnformatted("nil player")
 				continue
 			}
-			imgui.TextUnformatted(player.Name)
+			imgui.TextUnformatted(player.Uid.Name)
 
 			imgui.TableNextColumn()
 			modelName, ok := ecs2.GetObjectData[string](&e.Data, "unit__className")

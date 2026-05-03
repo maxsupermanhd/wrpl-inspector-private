@@ -81,7 +81,7 @@ func (tab KillsTab) Run() {
 						if p == nil {
 							imgui.TextUnformatted(fmt.Sprintf("nil player %d", playerid))
 						} else {
-							imgui.TextUnformatted(p.Name)
+							imgui.TextUnformatted(p.Uid.Name)
 						}
 					}
 					imgui.TableNextColumn()
@@ -110,7 +110,7 @@ func (tab KillsTab) Run() {
 						if p == nil {
 							imgui.TextUnformatted(fmt.Sprintf("nil player %d", playerid))
 						} else {
-							imgui.TextUnformatted(p.Name)
+							imgui.TextUnformatted(p.Uid.Name)
 						}
 					}
 					imgui.TableNextColumn()
