@@ -24,7 +24,6 @@ import (
 	"io"
 	"slices"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector-private/idfieldserializer"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v2/wrpl/packet"
@@ -316,16 +315,11 @@ func (p *PacketSlotParser) ParseSlotMessage(index uint16, msg []byte) (any, erro
 			if err != nil {
 				return err
 			}
-			var temp_name [82]byte
-			sz, err := r2.ReadBytesInto(82, temp_name[:])
+			name, err := r2.ReadBytes(65)
 			if err != nil {
 				return err
 			}
-			if sz != 82 {
-				return fmt.Errorf("invalid size reading uid name: %d", sz)
-			}
-
-			plr.Uid.Name = string(bytes.Trim(temp_name[:], "\x00"))
+			plr.Uid.Name = string(bytes.Trim(name, "\x00"))
 		case ClanTag:
 			err = r2.ReadLenStrInto(&plr.ClanTag)
 		case Title:
@@ -333,7 +327,6 @@ func (p *PacketSlotParser) ParseSlotMessage(index uint16, msg []byte) (any, erro
 		case team:
 			plr.Team, err = r2.ReadByte()
 		case realNick:
-			spew.Dump(fieldIndex, fieldSize, b)
 			err = r2.ReadLenStrInto(&plr.RealNick)
 		default:
 			return idfieldserializer.ErrSkipField
