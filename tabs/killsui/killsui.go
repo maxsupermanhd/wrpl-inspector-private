@@ -89,7 +89,7 @@ func (tab KillsTab) Run() {
 					imgui.TextUnformatted(name)
 					imgui.TableNextColumn()
 					if v.ResolvedKillerPosition != nil {
-						imgui.TextUnformatted(fmt.Sprintf("X %d Y %d Z %d", v.ResolvedKillerPosition.X, v.ResolvedKillerPosition.Y, v.ResolvedKillerPosition.Z))
+						imgui.TextUnformatted(fmt.Sprintf("X %.1f Y %.1f Z %.1f", v.ResolvedKillerPosition.X, v.ResolvedKillerPosition.Y, v.ResolvedKillerPosition.Z))
 					}
 					imgui.TableNextColumn()
 				}
@@ -118,7 +118,7 @@ func (tab KillsTab) Run() {
 					imgui.TextUnformatted(name)
 					imgui.TableNextColumn()
 					if v.ResolvedVictimPosition != nil {
-						imgui.TextUnformatted(fmt.Sprintf("X %d Y %d Z %d", v.ResolvedVictimPosition.X, v.ResolvedVictimPosition.Y, v.ResolvedVictimPosition.Z))
+						imgui.TextUnformatted(fmt.Sprintf("X %.1f Y %.1f Z %.1f", v.ResolvedVictimPosition.X, v.ResolvedVictimPosition.Y, v.ResolvedVictimPosition.Z))
 					}
 					imgui.TableNextColumn()
 				}
