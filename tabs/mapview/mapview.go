@@ -513,6 +513,12 @@ func (tab *MapViewTab) runPaths() {
 			playerid, ok := ecs2.GetObjectData[int32](&e.Data, "unit__playerId")
 			if !ok {
 				imgui.TextUnformatted("unresolved unit__playerId")
+				if imgui.IsItemHoveredV(imgui.HoveredFlagsForTooltip) {
+					if imgui.BeginTooltip() {
+						imgui.TextUnformatted(spew.Sdump(e.Data))
+						imgui.EndTooltip()
+					}
+				}
 				continue
 			}
 			if playerid < 0 || playerid >= 255 {
